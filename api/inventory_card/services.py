@@ -14,7 +14,7 @@ async def list_inventory_card(session: AsyncSession) -> list[ModelInventoryCard]
     return list_inventory_card_models
 
 
-async def create_inventory_card(uid: UUID, session: AsyncSession) -> ModelInventoryCard:
+async def get_inventory_card(uid: UUID, session: AsyncSession) -> ModelInventoryCard:
     cour = await session.execute(select(ModelInventoryCard).where(ModelInventoryCard.uid == uid))
     inventory_card_model = cour.scalar_one_or_none()
     if inventory_card_model:

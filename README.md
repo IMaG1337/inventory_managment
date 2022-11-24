@@ -22,7 +22,7 @@ pip install -r requirements.txt
 
 6) Launch app
 ```
-./env/bin/python3.11 server.py
+env/bin/python3 server.py
 ```
 
 

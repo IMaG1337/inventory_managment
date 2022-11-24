@@ -21,7 +21,7 @@ async def list_inventory_card(db: AsyncSession = Depends(get_db)):
 
 @router.get("/inventory_card/{uid}", response_model=SchemaInventoryCard, tags=['inventory_card'])
 async def get_inventory_card(uid: UUID, db: AsyncSession = Depends(get_db)):
-    db_inventory_card = await services.create_inventory_card(uid, db)
+    db_inventory_card = await services.get_inventory_card(uid, db)
     return db_inventory_card
 
 

@@ -11,7 +11,7 @@ python3 -m venv env
 ```
 3) activate venv
 ```
-source .env/bin/activate
+source env/bin/activate
 ```
 4) install requirements
 ```

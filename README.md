@@ -25,4 +25,5 @@ pip install -r requirements.txt
 done
 
 If you did everything right, then the web server should start on (http://localhost:8000/)
+
 API documentation is at (http://localhost:8000/api/docs/#/)

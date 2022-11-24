@@ -1,0 +1,9 @@
+RELOAD=True
+
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgresql
+DB_PASS=password
+DB_BASE=postgresql
+
+BASE_URL=http://localhost:8000

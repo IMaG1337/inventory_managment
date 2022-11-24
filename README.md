@@ -17,10 +17,14 @@ source env/bin/activate
 ```
 pip install -r requirements.txt
 ```
-5) Launch app
+
+5) create env file, sample file is written in sample_env
+
+6) Launch app
 ```
 ./env/bin/python3.11 server.py
 ```
+
 
 done
 

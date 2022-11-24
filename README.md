@@ -11,15 +11,23 @@ python3 -m venv env
 ```
 3) activate venv
 ```
-source .env/bin/activate
+source env/bin/activate
 ```
 4) install requirements
 ```
 pip install -r requirements.txt
 ```
-5) Launch app
+
+5) create env file, sample file is written in sample_env
+
+6) Launch app
 ```
 ./env/bin/python3.11 server.py
 ```
+
+
 done
-If you did everything right, then the web server should start on localhost 8000
+
+If you did everything right, then the web server should start on (http://localhost:8000/)
+
+API documentation is at (http://localhost:8000/api/docs/#/)

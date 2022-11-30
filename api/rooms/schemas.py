@@ -1,5 +1,6 @@
 from uuid import UUID
 from db.models.common import OrmModel
+from typing import Optional
 
 
 class PostRooms(OrmModel):
@@ -9,3 +10,8 @@ class PostRooms(OrmModel):
 
 class Rooms(PostRooms):
     uid: UUID
+
+
+class PatchRoom(OrmModel):
+    floor: Optional[int] = None
+    number: Optional[str] = None

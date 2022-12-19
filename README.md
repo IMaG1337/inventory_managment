@@ -3,7 +3,7 @@ A simple asynchronous API for performing inventory and accounting in your compan
 ### Development:
 1) clone repo
 ```
-git clone https://github.com/IMaG1337/inventory_managment.git && cd inventory_managment
+git clone https://github.com/IMaG1337/inventory_managment.git && cd app
 ```
 2) install python environment
 ```
@@ -15,14 +15,14 @@ source env/bin/activate
 ```
 4) install requirements
 ```
-pip install -r requirements.txt
+pip install -r app/requirements.txt
 ```
 
 5) create env file, sample file is written in sample_env
 
 6) Launch app
 ```
-env/bin/python3 server.py
+env/bin/python3 app/server.py
 ```
 
 

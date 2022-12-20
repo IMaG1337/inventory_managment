@@ -3,8 +3,8 @@ RELOAD=True
 
 DB_HOST=db
 DB_PORT=5432
-DB_USER=postgresql
+DB_USER=postgres
 DB_PASS=password
-DB_BASE=postgresql
+DB_BASE=fastapi
 
 BASE_URL=http://localhost:8000

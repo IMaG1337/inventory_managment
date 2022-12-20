@@ -27,3 +27,4 @@ If you did everything right you see 2 containers like: <br />
     ```inventory_managment_db_1```<br />    ```inventory_managment_web_1```
 
 API documentation is at (http://localhost:8000/api/docs/#/)
+![example](example.png)

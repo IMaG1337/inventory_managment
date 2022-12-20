@@ -1,3 +1,4 @@
+# rename file by .env
 RELOAD=True
 
 DB_HOST=localhost

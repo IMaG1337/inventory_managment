@@ -3,14 +3,13 @@ import uuid
 from sqlalchemy import Column, DateTime, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import VARCHAR, DATE, UUID
 from sqlalchemy.orm import relationship, column_property
-from sqlalchemy_utils import UUIDType
 from db.database import Base
 
 
 class InventoryInfo(Base):
     __tablename__ = "inventory_info"
 
-    uid = Column(UUIDType(binary=False), unique=True, primary_key=True, default=uuid.uuid4)
+    uid = Column(UUID(as_uuid=True), unique=True, primary_key=True, default=uuid.uuid4)
     name = Column(VARCHAR, nullable=False)
     receipt_data = Column(DATE, default=datetime.datetime.now())
     model = Column(VARCHAR, nullable=False)

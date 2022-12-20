@@ -12,28 +12,31 @@ class Settings(BaseSettings):
     ENV: str = "dev"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
-    BASE_URL_: str = f"http//:{HOST}:{PORT}"
+    _BASE_URL: str = f"https://{HOST}:{PORT}"
     # quantity of workers for uvicorn
     WORKERS_COUNT: int = 1
     # Enable uvicorn reloading
-    RELOAD: bool = True
+    RELOAD: bool = False
     # Database settings
-    DB_HOST: str = "postgres"
+    DB_HOST: str = "localhost"
     DB_PORT: int = 5432
     DB_USER: str = "postgres"
     DB_PASS: str = "postgres"
     DB_BASE: str = "db"
     DB_ECHO: bool = False
 
+    # @property
+    # def DB_BASE(self):
+    #     return self._DB_BASE
+
     @property
     def BASE_URL(self) -> str:
-        return self.BASE_URL_ if self.BASE_URL_.endswith("/") else f"{self.BASE_URL_}/"
+        return self._BASE_URL if self._BASE_URL.endswith("/") else f"{self._BASE_URL}/"
 
     @property
     def DB_URL(self) -> str:
         """
         Assemble Database URL from settings.
-
         :return: Database URL.
         """
 
@@ -43,35 +46,19 @@ class Settings(BaseSettings):
         env_file = f"{BASE_DIR}/.env"
         env_file_encoding = "utf-8"
         fields = {
-            "BASE_URL_": {
-                "env": "BASE_URL"
-            },
-            "DB_USER": {
-                "env": "DB_USER"
-            },
-            "DB_PASS": {
-                "env": "DB_PASS"
-            },
-            "DB_HOST": {
-                "env": "DB_HOST"
-            },
-            "DB_PORT": {
-                "env": "DB_PORT"
+            "_BASE_URL": {
+                "env": "BASE_URL",
             },
             "DB_BASE": {
-                "env": "DB_BASE"
+                "env": "DB_BASE",
             },
-
         }
 
 
 class TestSettings(Settings):
     @property
     def DB_BASE(self):
-        return f"{self.DB_BASE}_test"
+        return f"{super().DB_BASE}_test"
 
 
-if "pytest" in modules:
-    settings = TestSettings()
-else:
-    settings = Settings()
+settings = TestSettings() if "pytest" in modules else Settings()

@@ -17,5 +17,6 @@ COPY ./app/ .
 # install python dependencies
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
+RUN chmod a+x ./scripts/docker-entrypoint.sh
 
-ENTRYPOINT [ "python3.11", "server.py" ]
+CMD ./scripts/docker-entrypoint.sh

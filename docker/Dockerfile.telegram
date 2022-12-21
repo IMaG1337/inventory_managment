@@ -1,0 +1,21 @@
+# pull official base image
+FROM python:3.11-slim
+
+# set working directory
+WORKDIR /usr/src/telegram
+
+# set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# install system dependencies
+RUN apt-get update
+
+# add app
+COPY ./telegram/ .
+
+# install python dependencies
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+
+ENTRYPOINT [ "python3.11", "telegram_bot.py" ]

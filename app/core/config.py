@@ -25,10 +25,6 @@ class Settings(BaseSettings):
     DB_BASE: str = "db"
     DB_ECHO: bool = False
 
-    # @property
-    # def DB_BASE(self):
-    #     return self._DB_BASE
-
     @property
     def BASE_URL(self) -> str:
         return self._BASE_URL if self._BASE_URL.endswith("/") else f"{self._BASE_URL}/"

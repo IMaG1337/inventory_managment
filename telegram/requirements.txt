@@ -1,0 +1,3 @@
+python-telegram-bot==v20.0b0
+qreader==1.3.1
+python-dotenv==0.21.0

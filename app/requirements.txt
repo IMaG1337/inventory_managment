@@ -6,3 +6,4 @@ sqlmodel==0.0.8
 asyncpg==0.27.0
 sqlalchemy_utils==0.38.3
 python-dotenv==0.21.0
+qrcode==7.3.1

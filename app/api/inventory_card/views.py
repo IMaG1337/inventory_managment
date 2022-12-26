@@ -10,22 +10,25 @@ from api.inventory_card.schemas import (
     PostResponseInventoryCard as SchemaPostResponseInventoryCard
 )
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/inventory_card",
+    tags=["inventory_card"]
+)
 
 
-@router.get("/inventory_card/", response_model=list[SchemaInventoryCard] | list, tags=['inventory_card'])
+@router.get("/", response_model=list[SchemaInventoryCard] | list)
 async def list_inventory_card(db: AsyncSession = Depends(get_db)):
     db_inventory_card = await services.list_inventory_card(db)
     return db_inventory_card
 
 
-@router.get("/inventory_card/{uid}", response_model=SchemaInventoryCard, tags=['inventory_card'])
+@router.get("/{uid}", response_model=SchemaInventoryCard)
 async def get_inventory_card(uid: UUID, db: AsyncSession = Depends(get_db)):
     db_inventory_card = await services.get_inventory_card(uid, db)
     return db_inventory_card
 
 
-@router.post("/inventory_card/", response_model=SchemaPostResponseInventoryCard, tags=['inventory_card'])
+@router.post("/", response_model=SchemaPostResponseInventoryCard)
 async def post_inventory_card(post_inventory_card: SchemaPostInventoryCard, db: AsyncSession = Depends(get_db)):
     db_inventory_card = await services.post_inventory_card(db, post_inventory_card=post_inventory_card)
     return db_inventory_card

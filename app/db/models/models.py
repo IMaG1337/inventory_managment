@@ -75,7 +75,7 @@ class InventoryCard(Base):
 
     uid = Column(UUID(as_uuid=True), unique=True, primary_key=True, default=uuid.uuid4)
     employee_uid = Column(ForeignKey("employee.uid"), nullable=False, index=True)
-    inventory_info_uid = Column(ForeignKey("inventory_info.uid"), nullable=False, index=True)
+    inventory_info_uid = Column(ForeignKey("inventory_info.uid"), nullable=False, index=True, unique=True)
     room_uid = Column(ForeignKey("rooms.uid"), nullable=False, index=True)
 
     employee = relationship("Employee", lazy="joined", innerjoin=True)
@@ -105,7 +105,7 @@ class TempInventoryCard(Base):
     uid = Column(UUID(as_uuid=True), unique=True, primary_key=True, default=uuid.uuid4)
     date = Column(DateTime, nullable=False, default=datetime.datetime.now)
     employee_uid = Column(ForeignKey("employee.uid"), nullable=False)
-    room_uid_id = Column(ForeignKey("rooms.uid"), nullable=False)
+    room_uid = Column(ForeignKey("rooms.uid"), nullable=False)
     inventory_card_uid = Column(ForeignKey("inventory_card.uid"), nullable=False)
 
     employee = relationship("Employee", back_populates='temp_inventory_card')

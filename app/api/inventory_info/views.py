@@ -10,22 +10,25 @@ from api.inventory_info.schemas import (
 )
 
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/inventory_info",
+    tags=["inventory_info"]
+)
 
 
-@router.get("/inventory_info/", response_model=list[SchemaInventoryInfo], tags=['inventory_info'])
+@router.get("/", response_model=list[SchemaInventoryInfo])
 async def list_inventory_info(session: AsyncSession = Depends(get_db)):
     list_inventory_info_models = await services.list_inventory_info(session)
     return list_inventory_info_models
 
 
-@router.get("/inventory_info/{uid}", response_model=SchemaInventoryInfo, tags=['inventory_info'])
+@router.get("/{uid}", response_model=SchemaInventoryInfo)
 async def get_inventory_info(uid: UUID, session: AsyncSession = Depends(get_db)):
     inventory_info_model = await services.get_inventory_info(uid, session)
     return inventory_info_model
 
 
-@router.post("/inventory_info/", response_model=SchemaInventoryInfo, tags=['inventory_info'])
+@router.post("/", response_model=SchemaInventoryInfo)
 async def create_inventory_info(inventory_info: SchemaPostInventoryInfo, session: AsyncSession = Depends(get_db)):
     inventory_info_model = await services.create_inventory_info(inventory_info, session)
     return inventory_info_model

@@ -11,7 +11,16 @@ router = APIRouter(
 )
 
 
-@router.post('/')
+@router.post('/', responses={
+    201: {
+        'description':
+            "Create svg qr-code",
+        "content": {
+            "image/svg+xml": {}
+            }
+        }
+    }
+)
 async def create_qr_code(data: QRcodeSchema):
     qrcode_data = await services.create_qr_code(data)
     headers = {
@@ -19,5 +28,6 @@ async def create_qr_code(data: QRcodeSchema):
         "Content-Type": "image/svg+xml"
         }
     stream = BytesIO()
-    qrcode_data.save(stream)
-    return HTMLResponse(content=stream.getvalue().decode(), headers=headers, status_code=201)
+    qrcode_data.save(stream)  # save our svg image in memory
+    content = stream.getvalue().decode()  # xml string
+    return HTMLResponse(content=content, headers=headers, status_code=201)

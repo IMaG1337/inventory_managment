@@ -2,7 +2,8 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
-
+from fastapi_pagination.ext.async_sqlalchemy import paginate
+from fastapi_pagination import Page
 from db.models.models import Departments as ModelDepartments
 from api.departments.schemas import (
     PostDepartments as SchemaPostDepartments,
@@ -39,7 +40,5 @@ async def get_department(uid: UUID, session: AsyncSession) -> ModelDepartments:
     raise HTTPException(status_code=404, detail='Department not found.')
 
 
-async def list_department(session: AsyncSession) -> list[ModelDepartments] | list:
-    cour = await session.execute(select(ModelDepartments))
-    list_departments = cour.scalars().all()
-    return list_departments
+async def list_department(session: AsyncSession) -> Page[ModelDepartments]:
+    return await paginate(session, select(ModelDepartments))

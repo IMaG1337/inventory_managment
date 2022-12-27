@@ -1,6 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi_pagination import Page
 
 from db.database import get_db
 from api.inventory_info import services
@@ -16,7 +17,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[SchemaInventoryInfo])
+@router.get("/", response_model=Page[SchemaInventoryInfo])
 async def list_inventory_info(session: AsyncSession = Depends(get_db)):
     list_inventory_info_models = await services.list_inventory_info(session)
     return list_inventory_info_models

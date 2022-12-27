@@ -2,6 +2,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from api.departments.schemas import Departments, PostDepartments, PatchDepartments
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi_pagination import Page
 from db.database import get_db
 from api.departments import services
 
@@ -11,7 +12,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[Departments] | list)
+@router.get("/", response_model=Page[Departments])
 async def list_department(session: AsyncSession = Depends(get_db)):
     department_model = await services.list_department(session)
     return department_model

@@ -1,14 +1,19 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from fastapi_pagination.ext.async_sqlalchemy import paginate
 from db.models.models import InventoryInfo as ModelInventoryInfo
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, DBAPIError
 from fastapi import HTTPException
-from api.inventory_info.schemas import PostInventoryInfo as ShemaPostInventoryInfo
+from fastapi_pagination import Page
+from api.inventory_info.schemas import (
+    PostInventoryInfo as ShemaPostInventoryInfo,
+    InventoryInfo as ShemaInventoryInfo
+    )
 
 
-async def list_inventory_info(session: AsyncSession) -> list[ModelInventoryInfo]:
-    inventory_info = await session.execute(select(ModelInventoryInfo))
-    return inventory_info.scalars().all()
+async def list_inventory_info(session: AsyncSession) -> Page[ShemaInventoryInfo]:
+    # inventory_info = await session.execute(select(ModelInventoryInfo))
+    return await paginate(session, select(ModelInventoryInfo))
 
 
 async def get_inventory_info(uid: ModelInventoryInfo.uid, session: AsyncSession) -> ModelInventoryInfo:
@@ -27,4 +32,6 @@ async def create_inventory_info(inventory_info: ShemaPostInventoryInfo, session:
         await session.refresh(inventory_info)
     except IntegrityError:
         raise HTTPException(status_code=409, detail='Unique confict in inventory_info.')
+    except DBAPIError:
+        raise HTTPException(status_code=400, detail='Bad Data exception.')
     return inventory_info

@@ -1,5 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends
+from fastapi_pagination import Page
 from api.employee.schemas import (
     Employee as SchemaEmloyee,
     PostEmployee as SchemaPostEmployee,
@@ -16,7 +17,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[SchemaEmloyee] | list)
+@router.get("/", response_model=Page[SchemaEmloyee])
 async def list_employee(db: AsyncSession = Depends(get_db)):
     list_employee = await services.list_employee(db)
     return list_employee
@@ -34,7 +35,7 @@ async def create_employee(employee: SchemaPostEmployee, session: AsyncSession = 
     return db_employee
 
 
-@router.patch("/{uid}", response_model=SchemaEmloyee)
+@router.patch("/{uid}", response_model=SchemaPatchEmployee)
 async def patch_employee(uid: UUID, employee: SchemaPatchEmployee, session: AsyncSession = Depends(get_db)):
     db_employee = await services.patch_employee(uid, employee, session)
     return db_employee

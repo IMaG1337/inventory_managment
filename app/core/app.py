@@ -1,6 +1,6 @@
 from api.router import api_router
 from fastapi import FastAPI
-
+from fastapi_pagination import add_pagination
 
 def get_app() -> FastAPI:
     """
@@ -18,7 +18,7 @@ def get_app() -> FastAPI:
         redoc_url="/api/redoc/",
         openapi_url="/api/openapi.json"
     )
-
+    add_pagination(app)
     app.include_router(router=api_router)
 
     return app

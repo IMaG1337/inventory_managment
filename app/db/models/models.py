@@ -11,14 +11,14 @@ class InventoryInfo(Base):
 
     uid = Column(UUID(as_uuid=True), unique=True, primary_key=True, default=uuid.uuid4)
     name = Column(VARCHAR, nullable=False)
-    receipt_data = Column(DATE, default=datetime.datetime.now())
+    receipt_data = Column(DateTime, default=datetime.datetime.now())
     model = Column(VARCHAR, nullable=False)
     document = Column(VARCHAR, nullable=False)
-    date_of_registration = Column(DATE)
+    date_of_registration = Column(DateTime)
     cost = Column(VARCHAR, nullable=False)
-    useful_life = Column(DATE)
+    useful_life = Column(DateTime)
     note = Column(VARCHAR, nullable=False)
-    write_off_day = Column(DATE)
+    write_off_day = Column(DateTime)
     inventory_number = Column(VARCHAR, index=True, nullable=False, unique=True)
     inventory_serial = Column(VARCHAR)
     responsible_uid = Column(UUID(as_uuid=True), ForeignKey("employee.uid"), index=True)
@@ -48,8 +48,8 @@ class Employee(Base):
     departments_uid = Column(ForeignKey("departments.uid"))
     room_uid = Column(ForeignKey("rooms.uid"))
 
-    department = relationship("Departments", lazy="joined", innerjoin=True)
-    room = relationship("Rooms", lazy="joined", innerjoin=True)
+    department = relationship("Departments", innerjoin=True, lazy="joined")
+    room = relationship("Rooms", innerjoin=True, lazy="joined")
     temp_inventory_card = relationship('TempInventoryCard', back_populates='employee')
 
 

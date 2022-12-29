@@ -20,7 +20,11 @@ async def create_department(department: SchemaPostDepartments, session: AsyncSes
     return department_model
 
 
-async def patch_department(uid: UUID, department_item: SchemaPatchDepartments, session: AsyncSession) -> SchemaDepartments:
+async def patch_department(
+    uid: UUID,
+    department_item: SchemaPatchDepartments,
+    session: AsyncSession
+) -> SchemaDepartments:
     item = department_item.dict(exclude_unset=True)
     cour = await session.execute(
         update(ModelDepartments)

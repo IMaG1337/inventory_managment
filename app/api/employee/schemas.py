@@ -1,7 +1,6 @@
-import time
 from uuid import UUID
 from typing import Optional
-from pydantic import BaseModel, validator, root_validator
+from pydantic import BaseModel, root_validator
 from fastapi.exceptions import HTTPException
 
 from db.models.common import OrmModel

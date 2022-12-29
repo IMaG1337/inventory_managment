@@ -32,8 +32,7 @@ async def get_object_type(uid: ModelObjectTypes.uid, session: AsyncSession) -> M
 
 
 async def patch_object_type(uid: UUID, object_type_item: SchemaPatchObjectType, session: AsyncSession):
-    items = object_type_item.dict(exclude_none=True)
-    full = SchemaObjectType(**items)
+    items = object_type_item.dict(exclude_unset=True)
     cour = await session.execute(
         update(ModelObjectTypes)
         .where(ModelObjectTypes.uid == uid)
@@ -42,5 +41,5 @@ async def patch_object_type(uid: UUID, object_type_item: SchemaPatchObjectType, 
         )
     object_type = cour.one_or_none()
     if object_type:
-        PatchObjectType(**object_type)
+        return SchemaObjectType(**object_type)
     raise HTTPException(status_code=404, detail="ObjectType not found.")

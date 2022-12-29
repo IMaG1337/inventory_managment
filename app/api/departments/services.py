@@ -7,7 +7,8 @@ from fastapi_pagination import Page
 from db.models.models import Departments as ModelDepartments
 from api.departments.schemas import (
     PostDepartments as SchemaPostDepartments,
-    Departments as SchemaDepartments
+    Departments as SchemaDepartments,
+    PatchDepartments as SchemaPatchDepartments
     )
 
 
@@ -19,7 +20,7 @@ async def create_department(department: SchemaPostDepartments, session: AsyncSes
     return department_model
 
 
-async def patch_department(uid: UUID, department_item: SchemaDepartments, session: AsyncSession) -> SchemaDepartments:
+async def patch_department(uid: UUID, department_item: SchemaPatchDepartments, session: AsyncSession) -> SchemaDepartments:
     item = department_item.dict(exclude_unset=True)
     cour = await session.execute(
         update(ModelDepartments)

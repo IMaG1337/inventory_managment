@@ -5,7 +5,8 @@ from api.object_types.schemas import (
     ObjectType as SchemaObjectType,
     PostObjectType as SchemaPostObjectType,
     PatchObjectType as SchemaPatchObjectType,
-    ObjectTypeNotFound404
+    ObjectTypeNotFound404,
+    ObjectTypeEmptyJson
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.database import get_db
@@ -38,15 +39,18 @@ async def create_object_type(object_type: SchemaPostObjectType, session: AsyncSe
 
 @router.patch(
     "/{uid}",
-    response_model=SchemaPatchObjectType,
+    response_model=SchemaObjectType,
     responses={
         404: {
             "model": ObjectTypeNotFound404,
             "description": "This endpoint is called if not found ObjectType"
+        },
+        411: {
+            "model": ObjectTypeEmptyJson,
+            "description": "This endpoint is called if send empty Json."
         }
     }
 )
 async def patch_object_type(uid: UUID, object_type: SchemaPatchObjectType, session: AsyncSession = Depends(get_db)):
-    stored_item_data = item
     object_type = await services.patch_object_type(uid, object_type, session)
     return object_type

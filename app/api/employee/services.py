@@ -31,16 +31,18 @@ async def patch_employee(uid: UUID, employee_item: SchemaPatchEmployee, session:
         .where(ModelEmployee.uid == uid)
         .values(**items)
         .returning(ModelEmployee))
-    employee_dict = cour.mappings().fetchone()
-    return SchemaPatchEmployee(**employee_dict)
+    employee = cour.one_or_none()
+    if employee:
+        return SchemaPatchEmployee(**employee)
+    raise HTTPException(status_code=404, detail='Employee not found')
 
 
 async def list_employee(session: AsyncSession) -> list[ModelEmployee] | list:
     return await paginate(session, select(ModelEmployee))
 
 
-async def get_employee(uid: ModelEmployee.uid, session: AsyncSession) -> SchemaEmpoloyee:
-    employee: ModelEmployee = await session.scalar(select(ModelEmployee).where(ModelEmployee.uid == uid))
+async def get_employee(uid: ModelEmployee.uid, session: AsyncSession) -> ModelEmployee:
+    employee = await session.scalar(select(ModelEmployee).where(ModelEmployee.uid == uid))
     if employee:
         return employee
     raise HTTPException(status_code=404, detail='Employee not found')

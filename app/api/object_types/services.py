@@ -1,8 +1,15 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from db.models.models import ObjectTypes as ModelObjectTypes
+from uuid import UUID
 from fastapi import HTTPException
-from api.object_types.schemas import PostObjectType as ShemaPostObjectType
+from fastapi_pagination.ext.async_sqlalchemy import paginate
+from fastapi_pagination import Page
+from sqlalchemy import select, update
+
+from db.models.models import ObjectTypes as ModelObjectTypes
+from api.object_types.schemas import (
+    PostObjectType as ShemaPostObjectType,
+    PatchObjectType as SchemaPatchObjectType,
+    ObjectType as SchemaObjectType)
 
 
 async def create_object_type(object_type: ShemaPostObjectType, session: AsyncSession) -> ModelObjectTypes:
@@ -13,14 +20,27 @@ async def create_object_type(object_type: ShemaPostObjectType, session: AsyncSes
     return object_type_model
 
 
-async def list_object_types(session: AsyncSession) -> ModelObjectTypes:
-    list_object_types = await session.execute(select(ModelObjectTypes))
-    return list_object_types.scalars().all()
+async def list_object_types(session: AsyncSession) -> Page[ModelObjectTypes] | Page:
+    return await paginate(session, select(ModelObjectTypes))
 
 
 async def get_object_type(uid: ModelObjectTypes.uid, session: AsyncSession) -> ModelObjectTypes:
-    cour = await session.execute(select(ModelObjectTypes).where(ModelObjectTypes.uid == uid))
-    object_type = cour.scalar_one_or_none()
+    object_type = await session.scalar(select(ModelObjectTypes).where(ModelObjectTypes.uid == uid))
     if object_type:
         return object_type
     raise HTTPException(status_code=404, detail='Object type not found')
+
+
+async def patch_object_type(uid: UUID, object_type_item: SchemaPatchObjectType, session: AsyncSession):
+    items = object_type_item.dict(exclude_none=True)
+    full = SchemaObjectType(**items)
+    cour = await session.execute(
+        update(ModelObjectTypes)
+        .where(ModelObjectTypes.uid == uid)
+        .values(**items)
+        .returning(ModelObjectTypes)
+        )
+    object_type = cour.one_or_none()
+    if object_type:
+        PatchObjectType(**object_type)
+    raise HTTPException(status_code=404, detail="ObjectType not found.")

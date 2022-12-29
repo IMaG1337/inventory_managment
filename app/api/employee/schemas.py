@@ -1,5 +1,8 @@
+import time
 from uuid import UUID
 from typing import Optional
+from pydantic import BaseModel, validator, root_validator
+from fastapi.exceptions import HTTPException
 
 from db.models.common import OrmModel
 from api.rooms.schemas import PostRooms
@@ -36,3 +39,27 @@ class PatchEmployee(OrmModel):
     status: Optional[str] | None = None
     departments_uid: Optional[UUID] | None = None
     room_uid: Optional[UUID] | None = None
+
+    @root_validator(pre=True)
+    def check_empty(cls, v):
+        if len(v) == 0:
+            raise HTTPException(status_code=411, detail="Empty Json.")
+        return v
+
+
+class EmployeeNotFound404(BaseModel):
+    detail: str
+
+    class Config:
+        schema_extra = {
+            "example": {"detail": "Employee not found."},
+        }
+
+
+class EmployeeEmptyJson(BaseModel):
+    detail: str
+
+    class Config:
+        schema_extra = {
+            "example": {"detail": "Empty Json."},
+        }

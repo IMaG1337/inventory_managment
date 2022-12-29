@@ -4,7 +4,9 @@ from fastapi_pagination import Page
 from api.employee.schemas import (
     Employee as SchemaEmloyee,
     PostEmployee as SchemaPostEmployee,
-    PatchEmployee as SchemaPatchEmployee
+    PatchEmployee as SchemaPatchEmployee,
+    EmployeeNotFound404,
+    EmployeeEmptyJson
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.database import get_db
@@ -23,7 +25,16 @@ async def list_employee(db: AsyncSession = Depends(get_db)):
     return list_employee
 
 
-@router.get("/{uid}", response_model=SchemaEmloyee)
+@router.get(
+    "/{uid}",
+    response_model=SchemaEmloyee,
+    responses={
+        404: {
+            "model": EmployeeNotFound404,
+            "description": "This endpoint is called if not found Employee"
+        }
+    }
+)
 async def get_employee(uid: UUID, db: AsyncSession = Depends(get_db)):
     employee = await services.get_employee(uid, db)
     return employee
@@ -35,7 +46,20 @@ async def create_employee(employee: SchemaPostEmployee, session: AsyncSession = 
     return db_employee
 
 
-@router.patch("/{uid}", response_model=SchemaPatchEmployee)
+@router.patch(
+    "/{uid}",
+    response_model=SchemaPatchEmployee,
+    responses={
+        404: {
+            "model": EmployeeNotFound404,
+            "description": "This endpoint is called if not found Employee."
+        },
+        411: {
+            "model": EmployeeEmptyJson,
+            "description": "This endpoint is called if send empty Json."
+        }
+    }
+)
 async def patch_employee(uid: UUID, employee: SchemaPatchEmployee, session: AsyncSession = Depends(get_db)):
     db_employee = await services.patch_employee(uid, employee, session)
     return db_employee

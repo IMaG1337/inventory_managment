@@ -19,7 +19,7 @@ async def create_department(department: SchemaPostDepartments, session: AsyncSes
     return department_model
 
 
-async def patch_department(uid: UUID, department_item: SchemaDepartments, session: AsyncSession) -> ModelDepartments:
+async def patch_department(uid: UUID, department_item: SchemaDepartments, session: AsyncSession) -> SchemaDepartments:
     item = department_item.dict(exclude_unset=True)
     cour = await session.execute(
         update(ModelDepartments)
@@ -28,8 +28,10 @@ async def patch_department(uid: UUID, department_item: SchemaDepartments, sessio
         .returning(ModelDepartments)
         )
     await session.commit()
-    department = ModelDepartments(**cour.fetchone())
-    return department
+    result = cour.one_or_none()
+    if result:
+        return SchemaDepartments(**result)
+    raise HTTPException(status_code=404, detail='Department not found.')
 
 
 async def get_department(uid: UUID, session: AsyncSession) -> ModelDepartments:

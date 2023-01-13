@@ -16,8 +16,13 @@ If you don't change ```docker-compose.yml``` file it will default to ```DB_HOST=
 
 Build and up docker container 
 
+### To up docker
 ```
-docker-compose -f docker-compose.yml --env-file app/core/.env  up -d web
+make up 
+```
+### To down docker
+```
+make down 
 ```
 
 ### Done

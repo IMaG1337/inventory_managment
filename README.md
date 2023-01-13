@@ -18,11 +18,11 @@ Build and up docker container
 
 ### To up docker
 ```
-Make up 
+make up 
 ```
 ### To down docker
 ```
-Make down 
+make down 
 ```
 
 ### Done

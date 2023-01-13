@@ -7,7 +7,7 @@ git clone https://github.com/IMaG1337/inventory_managment.git
 ```
 ## Environment settings
 
-Rename ```.sample_env``` to ```.env``` in ```app/core``` or create new ```.env``` file <br /> 
+Rename ```.sample_env``` to ```.env``` or create new ```.env``` file <br /> 
 Insert your values in ```.env``` file <br />
 **```DB_HOST```** must be named as the service databases (db) in the ```docker-compose.yml``` file.<br /> 
 If you don't change ```docker-compose.yml``` file it will default to ```DB_HOST=db```

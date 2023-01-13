@@ -2,6 +2,7 @@ from api.router import api_router
 from fastapi import FastAPI
 from fastapi_pagination import add_pagination
 
+
 def get_app() -> FastAPI:
     """
     Get FastAPI application.

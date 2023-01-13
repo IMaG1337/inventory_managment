@@ -111,3 +111,11 @@ class TempInventoryCard(Base):
     employee = relationship("Employee", back_populates='temp_inventory_card')
     inventory_card = relationship("InventoryCard", back_populates='temp_inventory_card')
     room = relationship("Rooms", back_populates='temp_inventory_card')
+
+
+class TelegramUsers(Base):
+    __tablename__ = "telegram_chat"
+
+    uid = Column(UUID(as_uuid=True), unique=True, primary_key=True, default=uuid.uuid4)
+    chat_uid = Column(Integer, nullable=True)
+    phone_number = Column(VARCHAR)

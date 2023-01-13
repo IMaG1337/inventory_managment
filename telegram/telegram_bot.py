@@ -26,7 +26,7 @@ from telegram.ext import (
     PollAnswerHandler,
     filters,
 )
-
+from db import get_db
 # SQL request in to Database
 # from telegram_db import (
 #     check_id,
@@ -96,17 +96,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about function"""
 
     user_id = update.message.from_user.id
-    # result = check_id(user_id)  # проверяем есть ли id в нашей базе
-    # if result:
-    await update.message.reply_text(
+    result = check_id(user_id, get_db)  # проверяем есть ли id в нашей базе
+    if result:
+        await update.message.reply_text(
             "Добрый день, выберите нужную фунцию",
             reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD, one_time_keyboard=True),
         )
-    return CHOICES
-    # else:
-    #     await update.message.reply_text(
-    #         "Отправьте ваш контакт.Нажмите на верхний правый угол, отправить свой контакт.")
-    #     return CONTACT
+        return CHOICES
+    else:
+        await update.message.reply_text(
+            "Отправьте ваш контакт.Нажмите на верхний правый угол, отправить свой контакт.")
+        return CONTACT
 
 
 async def choices(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -598,16 +598,16 @@ async def detail_choices(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     con = (
         update.message.contact
-    )  # con он же contact {'user_id': 358519422, 'first_name': 'Оля', 'phone_number': '79112851657'}
+    )  # con он же contact {'user_id': 358519422, 'first_name': 'Оля', 'phone_number': '79119998877'}
     result = update_chat_id([con["user_id"], con["phone_number"]])  # True or False
-    if result != []:
+    if result:
         await update.message.reply_text(f"Ваш телефон принят.")
         await update.message.reply_text(
             "Выберите нужную фунцию", reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD, one_time_keyboard=True)
         )
         return CHOICES
     else:
-        await update.message.reply_text(f"У вас нет доступа.\nОбратитесь к администратору для добавления Вас в Базу.")
+        await update.message.reply_text("У вас нет доступа.\nОбратитесь к администратору для добавления Вас в Базу.")
         await update.message.reply_text("Для старта бота нажмите /start, либо в левом нижнем углу выберите пункт меню")
         return ConversationHandler.END
 

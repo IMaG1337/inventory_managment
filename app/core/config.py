@@ -64,10 +64,4 @@ class Settings(BaseSettings):
         }
 
 
-class TestSettings(Settings):
-    @property
-    def DB_BASE(self):
-        return f"{super().DB_BASE}_test"
-
-
-settings = TestSettings() if "pytest" in modules else Settings()
+settings = Settings()

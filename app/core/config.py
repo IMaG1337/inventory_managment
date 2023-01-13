@@ -3,7 +3,8 @@ from sys import modules
 
 from pydantic import BaseSettings
 
-BASE_DIR = Path(__file__).parent.resolve()
+# BASE_DIR = Path(__file__).parent.resolve()
+# BASE_DIR = Path.cwd()
 
 
 class Settings(BaseSettings):
@@ -39,8 +40,8 @@ class Settings(BaseSettings):
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_BASE}"
 
     class Config:
-        env_file = f"{BASE_DIR}/.env"
-        env_file_encoding = "utf-8"
+        # env_file = f"{BASE_DIR}/.env"
+        # env_file_encoding = "utf-8"
         fields = {
             "_BASE_URL": {
                 "env": "BASE_URL",
@@ -48,6 +49,18 @@ class Settings(BaseSettings):
             "DB_BASE": {
                 "env": "DB_BASE",
             },
+            "DB_HOST": {
+                "env": "DB_HOST"
+                },
+            "DB_PORT": {
+                "env": "DB_PORT"
+            },
+            "DB_USER": {
+                "env": "DB_USER"
+            },
+            "DB_PASS": {
+                "env": "DB_PASS"
+            }
         }
 
 

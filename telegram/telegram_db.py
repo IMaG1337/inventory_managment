@@ -4,6 +4,7 @@
 # from psycopg2.errors import NotNullViolation
 # import asyncpg
 import asyncio
+from typing import Union
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 # from db import get_db
@@ -61,11 +62,11 @@ async def get_db() -> AsyncSession:
 #         select card.uid, info.name, info.model,em.uid, em.name,
 #         em.surname, em.patronymic, room.uid, room.floor, room.number 
 #         from mainapp_inventorycard card 
-#         left join mainapp_inventoryinfo info 
+#         LEFT JOIN mainapp_inventoryinfo info 
 #         on card.inventory_number_uid_id  = info.uid 
-#         left join mainapp_employee em 
+#         LEFT JOIN mainapp_employee em 
 #         on card.employee_uid_id = em.uid 
-#         left join mainapp_rooms room
+#         LEFT JOIN mainapp_rooms room
 #         on card.room_uid_id = room.uid 
 #         where info.uid  = '{device}';
 #     """
@@ -194,11 +195,11 @@ async def get_db() -> AsyncSession:
 #             select card.uid, info.name, info.model,em.uid, em.name,
 #             em.surname, em.patronymic, room.uid, room.floor, room.number 
 #             from mainapp_inventorycard card 
-#             left join mainapp_inventoryinfo info 
+#             LEFT JOIN mainapp_inventoryinfo info 
 #             on card.inventory_number_uid_id  = info.uid 
-#             left join mainapp_employee em 
+#             LEFT JOIN mainapp_employee em 
 #             on card.employee_uid_id = em.uid 
-#             left join mainapp_rooms room
+#             LEFT JOIN mainapp_rooms room
 #             on card.room_uid_id = room.uid 
 #             where info.uid  = '{dev}';
 #         """
@@ -261,186 +262,215 @@ async def get_db() -> AsyncSession:
 #     return response
 
 
-# # Вставка в таблицу movents
-# def movents(all_devices: list, employee: str, office: str) -> dict:
-#     response = {"учтён": [], "не учтён": []}
-#     for dev in all_devices:
-#         sql_employee = f"""
-#             select em.surname, em.name, em.patronymic 
-#             from mainapp_employee em where em.uid = '{employee}';
-#         """
+# Вставка в таблицу movents
+def movents(all_devices: list[str], employee: str, office: str) -> dict:
+    response = {"учтён": [], "не учтён": []}
+    for dev in all_devices:
+        sql_employee = f"""
+            select em.surname, em.name, em.patronymic 
+            from mainapp_employee em where em.uid = '{employee}';
+        """
 
-#         sql_name_device = f"""
-#             select mi.name, mi.model  from mainapp_inventoryinfo mi 
-#             where uid = '{dev}'
-#         """
-#         sql_update = f"""
-#             insert into mainapp_movements (uid ,from_employee_uid_id, inventory_card_uid_id, to_employee_uid_id,  date)
-#             values((select uuid_generate_v4()),
-#             (select inv.employee_uid_id from mainapp_inventorycard inv where inv.inventory_number_uid_id = '{dev}'),
-#             (select inv.uid  from mainapp_inventorycard inv where inv.inventory_number_uid_id = '{dev}'),
-#             ('{employee}'),
-#             (now()));
+        sql_name_device = f"""
+            select mi.name, mi.model  from mainapp_inventoryinfo mi 
+            where uid = '{dev}'
+        """
+        sql_update = f"""
+            insert into mainapp_movements (uid ,from_employee_uid_id, inventory_card_uid_id, to_employee_uid_id,  date)
+            values((select uuid_generate_v4()),
+            (select inv.employee_uid_id from mainapp_inventorycard inv where inv.inventory_number_uid_id = '{dev}'),
+            (select inv.uid  from mainapp_inventorycard inv where inv.inventory_number_uid_id = '{dev}'),
+            ('{employee}'),
+            (now()));
 
-#             update mainapp_inventorycard a
-#             set employee_uid_id = '{employee}',
-#             room_uid_id = '{office}'
-#             where inventory_number_uid_id = '{dev}';
-#         """
+            update mainapp_inventorycard a
+            set employee_uid_id = '{employee}',
+            room_uid_id = '{office}'
+            where inventory_number_uid_id = '{dev}';
+        """
 
-#         with conn.cursor() as curs:
-#             check_device = check_inventory_card(dev)
-#             if "не учтённое устройство учёт" not in check_device.keys():
-#                 # Добавляем в таблицу movents данные от кого -> кому | и делаем update таблицы inventory_card
-#                 curs.execute(sql_update)
-#                 conn.commit()  # <-- Сохроняем изменения
-#                 # Так как хотим получить ФИО кому мы передали мы делаем еще один запрос для получения ФИО нашего сотруд.
-#                 curs.execute(sql_employee)
-#                 name_surname = curs.fetchall()[0]  # <-- Данные нашего сотрудника ФИО
-#                 sql_room = f"""select room.floor, room.number from mainapp_rooms room where room.uid = '{office}' """
-#                 curs.execute(sql_room)
-#                 office_floor_number = curs.fetchall()[0]
-#                 response["учтён"].append(
-#                     f"Устройство <b>{check_device['name_model'][0]}</b> модель <b>{check_device['name_model'][1]}</b>  "
-#                     f" теперь закреплено за <b>{' '.join(name_surname)}</b> на <b>{office_floor_number[0]}</b> этаже в <b>{office_floor_number[1]}</b> помещении"
-#                 )
+        with conn.cursor() as curs:
+            check_device = check_inventory_card(dev)
+            if "не учтённое устройство учёт" not in check_device.keys():
+                # Добавляем в таблицу movents данные от кого -> кому | и делаем update таблицы inventory_card
+                curs.execute(sql_update)
+                conn.commit()  # <-- Сохроняем изменения
+                # Так как хотим получить ФИО кому мы передали мы делаем еще один запрос для получения ФИО нашего сотруд.
+                curs.execute(sql_employee)
+                name_surname = curs.fetchall()[0]  # <-- Данные нашего сотрудника ФИО
+                sql_room = f"""select room.floor, room.number from mainapp_rooms room where room.uid = '{office}' """
+                curs.execute(sql_room)
+                office_floor_number = curs.fetchall()[0]
+                response["учтён"].append(
+                    f"Устройство <b>{check_device['name_model'][0]}</b> модель <b>{check_device['name_model'][1]}</b>  "
+                    f" теперь закреплено за <b>{' '.join(name_surname)}</b> на <b>{office_floor_number[0]}</b> этаже в <b>{office_floor_number[1]}</b> помещении"
+                )
 
-#             # Если устройство не числится то заполняем с ключом "не учтён"
-#             else:
-#                 curs.execute(sql_name_device)
-#                 name_model = curs.fetchall()[0]
-#                 response["не учтён"].append(
-#                     f"Устройство <b>{name_model[0]}</b> модель <b>{name_model[1]}</b> ещё не используется, проведите учёт"
-#                 )
-#     return response
-
-
-# # Детальная информация об устройстве
-# def detail_device(device: str) -> str:
-#     sql_device = f"""
-#         select info."name", info.model, emp.surname, emp."name", emp.patronymic, room.floor, room."number" 
-#         from mainapp_inventorycard inv 
-#         left join mainapp_inventoryinfo info
-#         on info.uid = inv.inventory_number_uid_id 
-#         left join mainapp_employee emp
-#         on emp.uid = inv.employee_uid_id 
-#         left join mainapp_rooms room
-#         on room.uid = inv.room_uid_id
-#         where inv.inventory_number_uid_id = '{device}';
-#     """
-
-#     with conn.cursor() as curs:
-#         curs.execute(sql_device)
-#         result = curs.fetchall()
-#         if result:
-#             result = result[0]
-#             return (
-#                 f"Устройство: <b>{result[0]}</b>\n"
-#                 f"Модель: <b>{result[1]}</b>\n"
-#                 f'Сотрудник: <b>{" ".join(result[2:5])}</b>\n'
-#                 f"Этаж: <b>{result[5]}</b>\n"
-#                 f"Помещение: <b>{result[6]}</b>"
-#             )
-#         else:
-#             return "Данное устройство не числится, проведите первичный учёт"
+            # Если устройство не числится то заполняем с ключом "не учтён"
+            else:
+                curs.execute(sql_name_device)
+                name_model = curs.fetchall()[0]
+                response["не учтён"].append(
+                    f"Устройство <b>{name_model[0]}</b> модель <b>{name_model[1]}</b> ещё не используется, проведите учёт"
+                )
+    return response
 
 
-# # Детальная информация об офисе
-# def detail_office(office: str) -> str:
-#     sql_office = f"""
-#         select room.floor as этаж,
-#         room."number" as помещение, 
-#         count(distinct inv.employee_uid_id) as колличество_сотрудников, 
-#         count(inv.inventory_number_uid_id) as колличество_мат
-#         from mainapp_rooms room
-#         left join mainapp_inventorycard inv
-#         on inv.room_uid_id = room.uid 
-#         left join mainapp_employee emp
-#         on emp.uid = inv.employee_uid_id
-#         where room.uid = '{office}'
-#         GROUP BY (этаж, помещение);
-#     """
-
-#     with conn.cursor() as curs:
-#         curs.execute(sql_office)
-#         result = curs.fetchall()
-#         if result:
-#             result = result[0]
-#             return (
-#                 f"Помещение: <b>{result[1]}</b>\n"
-#                 f"Этаж: <b>{result[0]}</b>\n"
-#                 f"Колличество сотрудников: <b>{result[2]}</b>\n"
-#                 f"Колличество материальных ценнностей: <b>{result[3]}</b>"
-#             )
-
-#         else:
-#             return "В данном помещении никто и ничто не числится"
-
-
-# # Более подробная информация о офисе, кто находится в нем и сколько мат ценностей
-# def detail_office_all(office):
-#     sql = f"""
-#         select emp.surname, emp."name", emp.patronymic, 
-#         count(inv.inventory_number_uid_id) from mainapp_employee emp
-#         left join mainapp_inventorycard inv
-#         on inv.employee_uid_id = emp.uid 
-#         where inv.room_uid_id = '{office}'
-#         group by (emp.surname, emp."name", emp.patronymic);
-#     """
-
-#     with conn.cursor() as curs:
-#         curs.execute(sql)
-#         employees = curs.fetchall()
-#         result = ""
-#         for employee in employees:
-#             result += f'Сотрудник <b>{" ".join(employee[0:3])}</b>: <b>{employee[3]}</b> мат ценностей\n'
-#         return result
+async def detail_device(device: str) -> str:
+    """
+    Detailed information about the registred device.
+    device is uid in inventory_info table.
+    """
+    sql = """
+            SELECT info."name", info.model, emp.surname, emp."name", emp.patronymicon, room.floor, room."number" 
+            FROM inventory_card inv
+            LEFT JOIN inventory_info info
+            ON info.uid = inv.inventory_info_uid
+            LEFT JOIN employee emp
+            ON emp.uid = inv.employee_uid
+            LEFT JOIN rooms room
+            ON room.uid = inv.room_uid
+            WHERE inv.inventory_info_uid  = '%s';""" % (device)
+    try:
+        db = get_db()
+        session: AsyncSession = await anext(db)
+        cour = await session.execute(sql)
+        result = cour.fetchone()
+    except Exception:
+        return "Технические проблемы, попробуйте ещё раз."
+    if result:
+        return (
+            f"Устройство: <b>{result[0]}</b>\n"
+            f"Модель: <b>{result[1]}</b>\n"
+            f'Сотрудник: <b>{" ".join(result[2:5])}</b>\n'
+            f"Этаж: <b>{result[5]}</b>\n"
+            f"Помещение: <b>{result[6]}</b>"
+        )
+    else:
+        return "Данное устройство не числится, проведите первичный учёт."
 
 
-def detail_employee(employee: str) -> str:
-    sql_employee = f"""
-        SELECT emp.surname, emp."name", emp.patronymicon, coalesce(r.floor, 0) as flour, 
+async def detail_office(office: str) -> Union[str, bool]:
+    """
+    Information about the office.
+    office is uid in rooms table
+    """
+    sql_office = """
+        SELECT room.floor as этаж,
+        room."number" as помещение,
+        count(distinct inv.employee_uid) as колличество_сотрудников,
+        count(inv.inventory_info_uid) as колличество_мат
+        FROM rooms room
+        LEFT JOIN inventory_card inv
+        ON inv.room_uid = room.uid
+        LEFT JOIN employee emp
+        ON emp.uid = inv.employee_uid
+        WHERE room.uid = '%s'
+        GROUP BY (этаж, помещение);""" % (office)
+    try:
+        db = get_db()
+        session: AsyncSession = await anext(db)
+        cour = await session.execute(sql_office)
+        result = cour.fetchone()
+    except Exception:
+        return "Технические проблемы, попробуйте ещё раз."
+    if result:
+        return (
+            f"Помещение: <b>{result[1]}</b>\n"
+            f"Этаж: <b>{result[0]}</b>\n"
+            f"Колличество сотрудников: <b>{result[2]}</b>\n"
+            f"Колличество материальных ценнностей: <b>{result[3]}</b>"
+        )
+    return "В данном помещении никто и ничто не числится"
+
+
+#  est
+async def detail_office_all(office: str) -> str:
+    """
+    Detailed information about the office, who is in it and how many mats of values.
+    office is uid in rooms table.
+    """
+
+    sql = """
+            SELECT emp.surname, emp."name", emp.patronymicon,
+            count(inv.inventory_info_uid) from employee emp
+            LEFT JOIN inventory_card inv
+            ON inv.employee_uid = emp.uid
+            WHERE inv.room_uid = '%s'
+            GROUP BY (emp.surname, emp."name", emp.patronymicon);""" % (office)
+    try:
+        db = get_db()
+        sesion: AsyncSession = await anext(db)
+        cour = await sesion.execute(sql)
+        employees = cour.fetchall()
+    except Exception:
+        return "Технические проблемы, попробуйте ещё раз."
+    result = ""
+    for employee in employees:
+        result += f'Сотрудник <b>{" ".join(employee[0:3])}</b>: <b>{employee[3]}</b> мат ценностей\n'
+    return result
+
+
+#  est
+async def detail_employee(employee: str) -> str:
+    """
+    Detailed information about the employee, namely on which floor,
+    room is listed and how many mats of values have.
+    """
+
+    sql = """
+        SELECT emp.surname, emp."name", emp.patronymicon, coalesce(r.floor, 0) as flour,
         coalesce(r."number", '') as "number", count(inv.uid)
         FROM employee emp
         LEFT JOIN inventory_card inv
-        ON inv.employee_uid_id = emp.uid
+        ON inv.employee_uid = emp.uid
         LEFT JOIN rooms r
-        ON r.uid = inv.room_uid_id
-        WHERE emp.uid = '{employee}'
-        GROUP BY (r.floor, r."number", emp.surname, emp."name", emp.patronymicon);
-    """
-    with conn.cursor() as curs:
-        curs.execute(sql_employee)
-        result = curs.fetchall()
-        if result:
-            employee = f"<b>{' '.join(result[0][0:3])}</b>\n"
-            for e in result:
-                employee += f"‣ <b>{e[3]}</b> этаж <b>{e[4]}</b> помещение <b>{e[5]}</b> мат ценностей\n"
-            return employee
-        else:
-            return "Такой сотрудник не числится"
+        ON r.uid = inv.room_uid
+        WHERE emp.uid = '%s'
+        GROUP BY (r.floor, r."number", emp.surname, emp."name", emp.patronymicon);""" % (employee)
+    try:
+        db = get_db()
+        session: AsyncSession = await anext(db)
+        cour = await session.execute(sql)
+        data = cour.fetchall()
+        await session.close()
+    except Exception:
+        return "Технические проблемы, попробуйте ещё раз."
+    if data:
+        employee = f"<b>{' '.join(data[0][0:3])}</b>\n"  # Ivanov Ivan Ivanovich
+        for detail in data:
+            employee += f"‣ <b>{detail[3]}</b> этаж <b>{detail[4]}</b> помещение <b>{detail[5]}</b> мат ценностей\n"
+        return employee
+    return "Такой сотрудник не числится"
 
 
+#  est
 async def check_id(user_id: int) -> bool:
     """
     Checks if a user with this id exists in the database
+    user_id is uid in telegram_chat table
     """
     try:
         db = get_db()
         session: AsyncSession = await anext(db)
-        sql = "select tg.uid from telegram_chat tg where tg.chat_uid = '%s';" % (int(user_id))
+        sql = "SELECT tg.uid FROM telegram_chat tg WHERE tg.chat_uid = '%s';" % (int(user_id))
         cour = await session.execute(sql)
         user = cour.scalar()
-        await session.commit()
-        if user:
-            return True
-        else:
-            return False
+        await session.close()
     except Exception:
         return False
+    if user:
+        return True
+    return False
 
 
+#  est
 async def update_chat_id(data: list[int, str]) -> bool:
+    """
+    Update chat_uid in telegram_chat table.
+    data is a list where the first element is int(chat_uid), second is str(phone_number)
+    format phone_number like '79998887766'
+    """
     db = get_db()
     session: AsyncSession = await anext(db)
     chat_id = data[0]
@@ -449,8 +479,7 @@ async def update_chat_id(data: list[int, str]) -> bool:
                     SET chat_uid  = %s
                     WHERE
                     phone_number  = '%s'
-                    returning chat_uid ;
-                    """ % (chat_id, phone_number)
+                    returning chat_uid ;""" % (chat_id, phone_number)
     try:
         cour = await session.execute(sql_update)
         result = cour.scalar()
@@ -460,4 +489,6 @@ async def update_chat_id(data: list[int, str]) -> bool:
         return False
 
 
-asyncio.run(update_chat_id([1234, '79112346524']))
+# print(asyncio.run(check_id("1234")))
+# print(asyncio.run(detail_office_all("9473ef9d-e6b1-41b9-9f80-0933d9afb803")))
+print(asyncio.run(detail_device("62e1da3b-5ba8-48c5-ac74-3fc63ca2a43c")))

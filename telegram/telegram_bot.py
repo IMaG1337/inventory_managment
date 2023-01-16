@@ -546,8 +546,7 @@ async def detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         elif check_box[0] == "office":
             context.user_data["office_detail"] = check_box[1]
             result = detail_office(
-                check_box[1]
-            )  # Передали uid офиса а получили инфу сколько сотрудников и сколько предметов
+                check_box[1])  # Передали uid офиса а получили инфу сколько сотрудников и сколько предметов
             await update.message.reply_text(f"{result}", parse_mode="HTML")
             await update.message.reply_text(
                 "Хотите подробный отчёт?",

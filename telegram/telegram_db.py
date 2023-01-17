@@ -266,28 +266,21 @@ async def get_db() -> AsyncSession:
 def movents(all_devices: list[str], employee: str, office: str) -> dict:
     response = {"учтён": [], "не учтён": []}
     for dev in all_devices:
-        sql_employee = f"""
-            select em.surname, em.name, em.patronymic 
-            from mainapp_employee em where em.uid = '{employee}';
-        """
-
-        sql_name_device = f"""
-            select mi.name, mi.model  from mainapp_inventoryinfo mi 
-            where uid = '{dev}'
-        """
-        sql_update = f"""
-            insert into mainapp_movements (uid ,from_employee_uid_id, inventory_card_uid_id, to_employee_uid_id,  date)
-            values((select uuid_generate_v4()),
-            (select inv.employee_uid_id from mainapp_inventorycard inv where inv.inventory_number_uid_id = '{dev}'),
-            (select inv.uid  from mainapp_inventorycard inv where inv.inventory_number_uid_id = '{dev}'),
-            ('{employee}'),
+        sql_employee = """
+            SELECT e.surname, e.name, e.patronymicon FROM employee e WHERE e.uid = '%s';""" % (employee)
+        sql_name_device = """
+            SELECT inv.name, inv.model  FROM inventory_info inv WHERE uid = '%s';""" % (dev)
+        sql_update = """ INSERT INTO movements (uid ,from_employee_uid, inventory_card_uid, to_employee_uid,  date)
+            values((SELECT uuid_generate_v4()),
+            (SELECT inv.employee_uid_id from mainapp_inventorycard inv WHERE inv.inventory_number_uid = '%(dev)s'),
+            (SELECT inv.uid  from mainapp_inventorycard inv WHERE inv.inventory_number_uid = '%(dev)s'),
+            ('%(employee)s'),
             (now()));
 
             update mainapp_inventorycard a
-            set employee_uid_id = '{employee}',
-            room_uid_id = '{office}'
-            where inventory_number_uid_id = '{dev}';
-        """
+            set employee_uid_id = '%(employee)s',
+            room_uid_id = '%(office)s'
+            WHERE inventory_number_uid_id = '%(dev)s';""" % {"dev": dev, "employee": employee, "office": office}
 
         with conn.cursor() as curs:
             check_device = check_inventory_card(dev)
@@ -316,6 +309,7 @@ def movents(all_devices: list[str], employee: str, office: str) -> dict:
     return response
 
 
+#  est
 async def detail_device(device: str) -> str:
     """
     Detailed information about the registred device.
@@ -350,6 +344,7 @@ async def detail_device(device: str) -> str:
         return "Данное устройство не числится, проведите первичный учёт."
 
 
+#  est
 async def detail_office(office: str) -> Union[str, bool]:
     """
     Information about the office.

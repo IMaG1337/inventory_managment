@@ -24,8 +24,23 @@ class Settings(BaseSettings):
     class Config:
         env_file = f"{BASE_DIR}/.env"
         fields = {
+            "DB_BASE": {
+                "env": "DB_BASE",
+            },
+            "DB_HOST": {
+                "env": "DB_HOST"
+                },
+            "DB_PORT": {
+                "env": "DB_PORT"
+            },
             "DB_USER": {
                 "env": "DB_USER"
+            },
+            "DB_PASS": {
+                "env": "DB_PASS"
+            },
+            "TOKEN": {
+                "env": "TELEGRAM_TOKEN"
             }
         }
 

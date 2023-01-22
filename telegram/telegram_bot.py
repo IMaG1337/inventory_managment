@@ -26,20 +26,23 @@ from telegram.ext import (
     PollAnswerHandler,
     filters,
 )
-from db import get_db
+
 # SQL request in to Database
-# from telegram_db import (
-#     check_id,
-#     detail_device,
-#     detail_employee,
-#     detail_office,
-#     detail_office_all,
-#     insert_inventorycard,
-#     movents,
-#     select,
-#     select_bio_employee,
-#     update_chat_id,
-# )
+from telegram_db import (
+    check_id,
+    detail_device,
+    detail_employee,
+    detail_office,
+    detail_office_all,
+    insert_inventorycard,
+    movents,
+    select,
+    select_bio_employee,
+    update_chat_id,
+)
+
+# Settings 
+from config import settings
 
 # Enable logging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -63,9 +66,11 @@ EMPLOYEE_OFFICE_DEVICE = {
     }
 
 # bot token
-TOKEN = "5447600750:AAGdcV8fQfccMYd16P9Cbo25PQQOuBkW7RU"
+TOKEN = settings.TOKEN
 
 # ------------------------------Decode function---------------------------------
+
+
 def decode_image(file_name: str) -> str:
     qreader = QReader()
     image = cv2.imread(file_name)
@@ -78,25 +83,22 @@ def decode_image(file_name: str) -> str:
     # result = decode(bw_im, symbols=[ZBarSymbol.QRCODE])
     decoded_text = qreader.detect_and_decode(image)
     if decoded_text:
-        print(decoded_text)
         return decoded_text
-    # print()
-    # return result[0].data.decode("utf-8").split(";")
 # ------------------------------------------------------------------------------
 
 
-## -----> Delete image
+# ------------------------------Delete image------------------------------------
 def delete_all_image(user: str) -> None:
     for file in glob.glob(f"./static_telegram/{user}*.jpg"):
         os.remove(file)
-## <-----
+# ------------------------------------------------------------------------------
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about function"""
 
     user_id = update.message.from_user.id
-    result = check_id(user_id, get_db)  # проверяем есть ли id в нашей базе
+    result = check_id(user_id)  # проверяем есть ли id в нашей базе
     if result:
         await update.message.reply_text(
             "Добрый день, выберите нужную фунцию",
@@ -272,7 +274,7 @@ async def next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = context.user_data["photo_people"]
     office = context.user_data["photo_office"]
 
-    ##########################----УЧЕТ----##########################################
+# --------------------------------УЧЕТ------------------------------------------
     if user_data == "Учёт":
         data = insert_inventorycard(all_devices, user, office)
         bio_employee = select_bio_employee(user)
@@ -336,9 +338,9 @@ async def next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                     reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_YES_NOT, one_time_keyboard=True),
                 )
                 return POOL
-    ################################################################################
+# ------------------------------------------------------------------------------
 
-    ##########################----СВЕРКА----########################################
+# ----------------------------------СВЕРКА--------------------------------------
     elif user_data == "Сверка":
         bio_employee = select_bio_employee(user)
         data = select(all_devices, user, office)
@@ -403,9 +405,9 @@ async def next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                     reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_YES_NOT, one_time_keyboard=True),
                 )
                 return POOL
-    ################################################################################
+# ------------------------------------------------------------------------------
 
-    ##############################----ПЕРЕМЕЩЕНИЕ----###############################
+# ---------------------------ПЕРЕМЕЩЕНИЕ----------------------------------------
     elif user_data == "Перемещение":
         response = movents(all_devices, user, office)
         #
@@ -420,9 +422,7 @@ async def next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_NEXT, one_time_keyboard=True),
         )
         return NEXT_EMPLOYEE_OR_ROOM
-
-
-################################################################################
+# ------------------------------------------------------------------------------
 
 
 async def poll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None or int:
@@ -438,9 +438,9 @@ async def poll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None or in
             questions = context.user_data["poll"]["name_model"]
             message = await context.bot.send_poll(
                 update.effective_chat.id,
-                f"Какие устройства выбрать для учёта за сотрудником 🤔?"
+                "Какие устройства выбрать для учёта за сотрудником 🤔?"
                 if choice == "Сверка"
-                else f"Какие устройства переместить  🤔?",
+                else "Какие устройства переместить  🤔?",
                 questions,
                 is_anonymous=False,
                 allows_multiple_answers=True,
@@ -483,7 +483,7 @@ async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE
     choice = context.user_data["poll"]["choice"]
     answered_poll = context.bot_data[answer.poll_id]  # answer.poll_id = '5321011176010678462'
     try:
-        questions = answered_poll["questions"]
+        answered_poll["questions"]
     # this means this poll answer update is from an old poll, we can't do our answering then
     except KeyError:
         return
@@ -515,6 +515,7 @@ async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancels and ends the conversation."""
+
     user = update.message.from_user
     logger.info(f"User {user.first_name} canceled the conversation.")
     await update.message.reply_text("Хорошего дня!", reply_markup=ReplyKeyboardRemove())
@@ -566,7 +567,7 @@ async def detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
         else:
             await update.message.reply_text(
-                f"Ваш qr-cod не распознан, попробуйте прислать его ещё раз 🔁\n" f"Либо нажмите /cancel для выхода"
+                "Ваш qr-cod не распознан, попробуйте прислать его ещё раз 🔁\n" "Либо нажмите /cancel для выхода"
             )
             return DETAIL
 
@@ -574,7 +575,7 @@ async def detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         logger.info(f"Error of {user.first_name}: {e}")
         os.remove(file_name)
         await update.message.reply_text(
-            f"Ваш qr-cod не распознан, попробуйте ещё раз 🔁\n" f"Либо нажмите /cancel для выхода"
+            "Ваш qr-cod не распознан, попробуйте ещё раз 🔁\n" "Либо нажмите /cancel для выхода"
         )
         return DETAIL
 
@@ -600,7 +601,7 @@ async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )  # con он же contact {'user_id': 358519422, 'first_name': 'Оля', 'phone_number': '79119998877'}
     result = update_chat_id([con["user_id"], con["phone_number"]])  # True or False
     if result:
-        await update.message.reply_text(f"Ваш телефон принят.")
+        await update.message.reply_text("Ваш телефон принят.")
         await update.message.reply_text(
             "Выберите нужную фунцию", reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD, one_time_keyboard=True)
         )

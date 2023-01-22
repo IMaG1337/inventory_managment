@@ -14,10 +14,11 @@ from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.asyncio import AsyncSession
-# from config import settings
+from config import settings
 
 
 async_engine = create_async_engine("postgresql+asyncpg://magomed:12345678@localhost:5432/fastapi")
+# async_engine = create_async_engine(settings.DB_URL) # потом выставить
 
 
 async_session = sessionmaker(

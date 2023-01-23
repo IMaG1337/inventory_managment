@@ -13,7 +13,7 @@ from sqlalchemy import text
 # conn = asyncpg.connect(settings.DB_URL)
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.engine.cursor import CursorResult
 from config import settings
 
 
@@ -57,47 +57,47 @@ async def get_db() -> AsyncSession:
 #         # return "Данные не корректные"
 
 
-# # проверка числится ли устройство за кем то
-# def check_inventory_card(device: str) -> dict:
-#     sql = f"""
-#         select card.uid, info.name, info.model,em.uid, em.name,
-#         em.surname, em.patronymic, room.uid, room.floor, room.number 
-#         from mainapp_inventorycard card 
-#         LEFT JOIN mainapp_inventoryinfo info 
-#         on card.inventory_number_uid_id  = info.uid 
-#         LEFT JOIN mainapp_employee em 
-#         on card.employee_uid_id = em.uid 
-#         LEFT JOIN mainapp_rooms room
-#         on card.room_uid_id = room.uid 
-#         where info.uid  = '{device}';
-#     """
-#     sql_name_devices = f"""
-#         select mi.name, mi.model  from mainapp_inventoryinfo mi 
-#         where uid = '{device}'
-#     """
-#     with conn.cursor() as curs:
-#         curs.execute(sql)
-#         data = curs.fetchall()
-#         # проверяем числится ли за кем то устройство
-#         if data:
-#             data = data[0]
-#             all_info = {
-#                 "name_model": data[1:3],
-#                 "uid_emp": data[3],
-#                 "user_name_surname_pat": data[4:7],
-#                 "floor_uid": data[7],
-#                 "floor_number": data[8:10],
-#             }
-#             return all_info
-#         # Если устройство не числится ни за кем
-#         else:
-#             curs.execute(sql_name_devices)
-#             name_model = curs.fetchall()[0]
-#             all_info = {
-#                 "не учтённое устройство сверка": f"Устройство <b>{name_model[0]}</b>, модель <b>{name_model[1]}</b> ещё не используется, проведите учёт",
-#                 "не учтённое устройство учёт": "None",
-#             }
-#             return all_info
+# проверка числится ли устройство за кем то
+async def check_inventory_card(device: str) -> dict:
+    sql = """
+        SELECT card.uid, info.name, info.model, em.uid, em.name,
+        em.surname, em.patronymicon, room.uid, room.floor, room.number
+        from inventory_card card
+        LEFT JOIN inventory_info info
+        on card.inventory_info_uid  = info.uid
+        LEFT JOIN employee em
+        on card.employee_uid = em.uid
+        LEFT JOIN rooms room
+        on card.room_uid = room.uid
+        WHERE info.uid  = '%s';
+    """ % (device)
+    sql_name_devices = """
+        SELECT mi.name, mi.model  FROM inventory_info mi
+        WHERE uid = '%s'
+    """ % (device)
+    db = get_db()
+    session: AsyncSession = await anext(db)
+    cour: CursorResult = await session.execute(sql)
+    data = cour.fetchone()
+    # проверяем числится ли за кем то устройство
+    if data:
+        all_info = {
+            "name_model": data[1:3],
+            "uid_emp": data[3],
+            "user_name_surname_pat": data[4:7],
+            "floor_uid": data[7],
+            "floor_number": data[8:10],
+        }
+        return all_info
+    # Если устройство не числится ни за кем
+    else:
+        cour = await session.execute(sql_name_devices)
+        name_model = cour.fetchone()
+        all_info = {
+            "не учтённое устройство сверка": f"Устройство <b>{name_model[0]}</b>, модель <b>{name_model[1]}</b> ещё не используется, проведите учёт",
+            "не учтённое устройство учёт": "None",
+        }
+        return all_info
 
 
 # # Вставка в таблицу inventory_card
@@ -174,16 +174,17 @@ async def get_db() -> AsyncSession:
 #     return response
 
 
-# # ФИО сотрудника
-# def select_bio_employee(employee_uid: str) -> str:
-#     sql_user = f"""
-#         select em.surname, em.name, em.patronymic 
-#         from mainapp_employee em where em.uid = '{employee_uid}';
-#     """
-#     with conn.cursor() as curs:
-#         curs.execute(sql_user)
-#         user_name = curs.fetchall()[0]
-#     return " ".join(user_name)
+# ФИО сотрудника
+async def select_bio_employee(employee_uid: str) -> str:
+    sql_user = f"""
+        select e.surname, e.name, e.patronymicon
+        from employee e where e.uid = '{employee_uid}';
+    """
+    db = get_db()
+    session: AsyncSession = await anext(db)
+    cour: CursorResult = await session.execute(sql_user)
+    user_name = cour.fetchone()
+    return " ".join(user_name)
 
 
 # # Сверка девайса с сотрудником и офисом
@@ -263,50 +264,54 @@ async def get_db() -> AsyncSession:
 #     return response
 
 
-# Вставка в таблицу movents
-def movents(all_devices: list[str], employee: str, office: str) -> dict:
+# est
+async def movents(all_devices: list[str], employee: str, office: str) -> dict:
     response = {"учтён": [], "не учтён": []}
     for dev in all_devices:
+        db = get_db()
+        session: AsyncSession = await anext(db)
         sql_employee = """
             SELECT e.surname, e.name, e.patronymicon FROM employee e WHERE e.uid = '%s';""" % (employee)
         sql_name_device = """
             SELECT inv.name, inv.model  FROM inventory_info inv WHERE uid = '%s';""" % (dev)
-        sql_update = """ INSERT INTO movements (uid ,from_employee_uid, inventory_card_uid, to_employee_uid,  date)
+        sql_insert = """
+            INSERT INTO movements (uid, reason, from_employee_uid, inventory_card_uid, to_employee_uid,  date)
             values((SELECT uuid_generate_v4()),
-            (SELECT inv.employee_uid_id from mainapp_inventorycard inv WHERE inv.inventory_number_uid = '%(dev)s'),
-            (SELECT inv.uid  from mainapp_inventorycard inv WHERE inv.inventory_number_uid = '%(dev)s'),
+            'telegram_movents',
+            (SELECT inv.employee_uid from inventory_card inv WHERE inv.inventory_info_uid = '%(dev)s'),
+            (SELECT inv.uid  from inventory_card inv WHERE inv.inventory_info_uid = '%(dev)s'),
             ('%(employee)s'),
-            (now()));
+            (now()));""" % {"dev": dev, "employee": employee}
+        sql_update = """
+            update inventory_card a
+            set employee_uid = '%(employee)s',
+            room_uid = '%(office)s'
+            WHERE inventory_info_uid = '%(dev)s';""" % {"dev": dev, "employee": employee, "office": office}
+        check_device = await check_inventory_card(dev)  # числится ли устройство за кем то
+        if "не учтённое устройство учёт" not in check_device.keys():
+            await session.execute(sql_insert)
+            await session.execute(sql_update)
+            await session.commit()
+            # Добавляем в таблицу movents данные от кого -> кому | и делаем update таблицы inventory_card
+            # Так как хотим получить ФИО кому мы передали мы делаем еще один запрос для получения ФИО нашего сотруд.
+            cour: CursorResult = await session.execute(sql_employee)
+            name_surname = cour.fetchone()  # <-- Данные нашего сотрудника ФИО
+            sql_room = f"""select room.floor, room.number from rooms room where room.uid = '{office}' """
+            cour = await session.execute(sql_room)
+            office_floor_number = cour.fetchone()
+            response["учтён"].append(
+                f"Устройство <b>{check_device['name_model'][0]}</b> модель <b>{check_device['name_model'][1]}</b>  "
+                f" теперь закреплено за <b>{' '.join(name_surname)}</b> на <b>{office_floor_number[0]}</b>\
+                    этаже в <b>{office_floor_number[1]}</b> помещении"
+            )
 
-            update mainapp_inventorycard a
-            set employee_uid_id = '%(employee)s',
-            room_uid_id = '%(office)s'
-            WHERE inventory_number_uid_id = '%(dev)s';""" % {"dev": dev, "employee": employee, "office": office}
-
-        with conn.cursor() as curs:
-            check_device = check_inventory_card(dev)
-            if "не учтённое устройство учёт" not in check_device.keys():
-                # Добавляем в таблицу movents данные от кого -> кому | и делаем update таблицы inventory_card
-                curs.execute(sql_update)
-                conn.commit()  # <-- Сохроняем изменения
-                # Так как хотим получить ФИО кому мы передали мы делаем еще один запрос для получения ФИО нашего сотруд.
-                curs.execute(sql_employee)
-                name_surname = curs.fetchall()[0]  # <-- Данные нашего сотрудника ФИО
-                sql_room = f"""select room.floor, room.number from mainapp_rooms room where room.uid = '{office}' """
-                curs.execute(sql_room)
-                office_floor_number = curs.fetchall()[0]
-                response["учтён"].append(
-                    f"Устройство <b>{check_device['name_model'][0]}</b> модель <b>{check_device['name_model'][1]}</b>  "
-                    f" теперь закреплено за <b>{' '.join(name_surname)}</b> на <b>{office_floor_number[0]}</b> этаже в <b>{office_floor_number[1]}</b> помещении"
-                )
-
-            # Если устройство не числится то заполняем с ключом "не учтён"
-            else:
-                curs.execute(sql_name_device)
-                name_model = curs.fetchall()[0]
-                response["не учтён"].append(
-                    f"Устройство <b>{name_model[0]}</b> модель <b>{name_model[1]}</b> ещё не используется, проведите учёт"
-                )
+        # Если устройство не числится то заполняем с ключом "не учтён"
+        else:
+            cour = await session.execute(sql_name_device)
+            name_model = cour.fetchone()
+            response["не учтён"].append(
+                f"Устройство <b>{name_model[0]}</b> модель <b>{name_model[1]}</b> ещё не используется, проведите учёт"
+            )
     return response
 
 
@@ -329,7 +334,7 @@ async def detail_device(device: str) -> str:
     try:
         db = get_db()
         session: AsyncSession = await anext(db)
-        cour = await session.execute(sql)
+        cour: CursorResult = await session.execute(sql)
         result = cour.fetchone()
     except Exception:
         return "Технические проблемы, попробуйте ещё раз."
@@ -341,8 +346,7 @@ async def detail_device(device: str) -> str:
             f"Этаж: <b>{result[5]}</b>\n"
             f"Помещение: <b>{result[6]}</b>"
         )
-    else:
-        return "Данное устройство не числится, проведите первичный учёт."
+    return "Данное устройство не числится, проведите первичный учёт."
 
 
 #  est
@@ -366,7 +370,7 @@ async def detail_office(office: str) -> Union[str, bool]:
     try:
         db = get_db()
         session: AsyncSession = await anext(db)
-        cour = await session.execute(sql_office)
+        cour: CursorResult = await session.execute(sql_office)
         result = cour.fetchone()
     except Exception:
         return "Технические проблемы, попробуйте ещё раз."
@@ -487,4 +491,9 @@ async def update_chat_id(data: list[int, str]) -> bool:
 
 # print(asyncio.run(check_id("1234")))
 # print(asyncio.run(detail_office_all("9473ef9d-e6b1-41b9-9f80-0933d9afb803")))
-print(asyncio.run(detail_device("62e1da3b-5ba8-48c5-ac74-3fc63ca2a43c")))
+print(asyncio.run(select_bio_employee("c9498c10-6c69-4771-9d15-73c8376d47bd")))
+# print(asyncio.run(detail_device("62e1da3b-5ba8-48c5-ac74-3fc63ca2a43c")))
+# print(asyncio.run(check_inventory_card("bbdeb94e-a1af-4f0d-b2af-743b7d6277f7")))
+# print(asyncio.run(movents(
+#     ["ac70c744-211b-4d2a-96ff-39fa8cc6f0fb", "62e1da3b-5ba8-48c5-ac74-3fc63ca2a43c"], 'ad114208-9076-4c9a-b84e-d44cb098344a', '9473ef9d-e6b1-41b9-9f80-0933d9afb803')))
+

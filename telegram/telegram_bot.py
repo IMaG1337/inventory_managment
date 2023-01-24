@@ -34,14 +34,14 @@ from telegram_db import (
     detail_employee,
     detail_office,
     detail_office_all,
-    insert_inventorycard,
+    insert_inventory_card,
     movents,
     select,
     select_bio_employee,
     update_chat_id,
 )
 
-# Settings 
+# Settings
 from config import settings
 
 # Enable logging
@@ -68,9 +68,8 @@ EMPLOYEE_OFFICE_DEVICE = {
 # bot token
 TOKEN = settings.TOKEN
 
-# ------------------------------Decode function---------------------------------
 
-
+#  ------------------------------Decode function---------------------------------
 def decode_image(file_name: str) -> str:
     qreader = QReader()
     image = cv2.imread(file_name)
@@ -78,7 +77,7 @@ def decode_image(file_name: str) -> str:
     # на stackoverwlow нашел этот пост
     # https://stackoverflow.com/questions/61442775/preprocessing-images-for-qr-detection-in-python/61443430#61443430
     # по этому подключил kraken в нем есть nlbin он выполняет бинаризацию с использованием нелинейной обработки
-    # так же нашел либу 
+    # так же нашел либу
     # bw_im = binarization.nlbin(im)
     # result = decode(bw_im, symbols=[ZBarSymbol.QRCODE])
     decoded_text = qreader.detect_and_decode(image)
@@ -98,7 +97,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about function"""
 
     user_id = update.message.from_user.id
-    result = check_id(user_id)  # проверяем есть ли id в нашей базе
+    result = await check_id(user_id)  # проверяем есть ли id в нашей базе
     if result:
         await update.message.reply_text(
             "Добрый день, выберите нужную фунцию",
@@ -216,7 +215,7 @@ async def photo_people(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 f"Это qr-code {EMPLOYEE_OFFICE_DEVICE[check_box[0]]} 🔁\n"
                 f"Пришлите пожалуйста qr-code сотрудника\nДля отмены нажмите -> /cancel"
             )
-            
+
     except Exception as e:
         os.remove(file_name)
         logger.info(f"Error of {user.first_name}: {e}")
@@ -276,8 +275,8 @@ async def next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 # --------------------------------УЧЕТ------------------------------------------
     if user_data == "Учёт":
-        data = insert_inventorycard(all_devices, user, office)
-        bio_employee = select_bio_employee(user)
+        data = await insert_inventory_card(all_devices, user, office)
+        bio_employee = await select_bio_employee(user)
         # 1) если нету не учтённых то просто присылаем сообщение
         if data["не учтён"] == []:
             for i in data["учтён"]:
@@ -342,8 +341,8 @@ async def next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 # ----------------------------------СВЕРКА--------------------------------------
     elif user_data == "Сверка":
-        bio_employee = select_bio_employee(user)
-        data = select(all_devices, user, office)
+        bio_employee = await select_bio_employee(user)
+        data = await select(all_devices, user, office)
 
         # 1) если нету не учтённых то просто присылаем сообщение
         if data["не учтён"] == []:
@@ -409,7 +408,7 @@ async def next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 # ---------------------------ПЕРЕМЕЩЕНИЕ----------------------------------------
     elif user_data == "Перемещение":
-        response = movents(all_devices, user, office)
+        response = await movents(all_devices, user, office)
         #
         if response["учтён"] != []:
             for device in response["учтён"]:
@@ -457,9 +456,9 @@ async def poll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None or in
             context.bot_data.update(payload)
         else:
             if choice == "Сверка":
-                response = insert_inventorycard(devices, employee, office)
+                response = await insert_inventory_card(devices, employee, office)
             else:
-                response = movents(devices, employee, office)
+                response = await movents(devices, employee, office)
             await update.message.reply_text(response["учтён"][0], parse_mode="HTML")
 
             await update.message.reply_text(
@@ -495,9 +494,9 @@ async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE
     for num in selected_options:
         selected_devices.append(all_devices[num])
     if choice == "Сверка":
-        response = insert_inventorycard(selected_devices, employee, office)  # проводим первичный учёт устройств
+        response = await insert_inventory_card(selected_devices, employee, office)  # проводим первичный учёт устройств
     elif choice == "Учёт":
-        response = movents(selected_devices, employee, office)  # перемещаем
+        response = await movents(selected_devices, employee, office)  # перемещаем
     for device in response["учтён"]:
         await context.bot.send_message(
             answered_poll["chat_id"],
@@ -535,7 +534,7 @@ async def detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         check_box = decode_image(file_name)
         os.remove(file_name)
         if check_box[0] == "device":
-            result = detail_device(
+            result = await detail_device(
                 check_box[1]
             )  # Передали uid устройства а получили инфу какое устройство, за кем числится и где.
             await update.message.reply_text(f"{result}", parse_mode="HTML")
@@ -546,7 +545,7 @@ async def detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             return CHOICES
         elif check_box[0] == "office":
             context.user_data["office_detail"] = check_box[1]
-            result = detail_office(
+            result = await detail_office(
                 check_box[1])  # Передали uid офиса а получили инфу сколько сотрудников и сколько предметов
             await update.message.reply_text(f"{result}", parse_mode="HTML")
             await update.message.reply_text(
@@ -557,7 +556,7 @@ async def detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
         elif check_box[0] == "employee":
             context.user_data["employee_detail"] = check_box[1]
-            result = detail_employee(check_box[1])
+            result = await detail_employee(check_box[1])
             await update.message.reply_text(f"{result}", parse_mode="HTML")
             await update.message.reply_text(
                 "Выберите нужную фунцию",
@@ -583,15 +582,15 @@ async def detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def detail_choices(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     text = update.message.text
     office = context.user_data["office_detail"]
-    # employee = context.user_data['employee_detail']
     if text == "Да":
-        result = detail_office_all(office)
+        result = await detail_office_all(office)
         await update.message.reply_text(result, parse_mode="HTML")
-    office = ""
-    await update.message.reply_text(
-        "Выберите нужную фунцию",
-        reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD, one_time_keyboard=True),
-    )
+    else:
+        office = ""
+        await update.message.reply_text(
+            "Выберите нужную фунцию",
+            reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD, one_time_keyboard=True),
+        )
     return CHOICES
 
 
@@ -599,7 +598,7 @@ async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     con = (
         update.message.contact
     )  # con он же contact {'user_id': 358519422, 'first_name': 'Оля', 'phone_number': '79119998877'}
-    result = update_chat_id([con["user_id"], con["phone_number"]])  # True or False
+    result = await update_chat_id([con["user_id"], con["phone_number"]])  # True or False
     if result:
         await update.message.reply_text("Ваш телефон принят.")
         await update.message.reply_text(

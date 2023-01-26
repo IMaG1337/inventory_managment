@@ -17,8 +17,7 @@ async def list_inventory_info(session: AsyncSession) -> Page[ShemaInventoryInfo]
 
 
 async def get_inventory_info(uid: ModelInventoryInfo.uid, session: AsyncSession) -> ModelInventoryInfo:
-    cour = await session.execute(select(ModelInventoryInfo).where(ModelInventoryInfo.uid == uid))
-    inventory_info = cour.scalar_one_or_none()
+    inventory_info = await session.scalar(select(ModelInventoryInfo).where(ModelInventoryInfo.uid == uid))
     if inventory_info:
         return inventory_info
     raise HTTPException(status_code=404, detail="Inventory info not found")

@@ -17,8 +17,7 @@ async def list_rooms(session: AsyncSession) -> list[ModelRoom]:
 
 
 async def get_room(uid: UUID, session: AsyncSession) -> ModelRoom:
-    cour = await session.execute(select(ModelRoom).where(ModelRoom.uid == uid))
-    room = cour.scalar_one_or_none()
+    room = await session.scalar(select(ModelRoom).where(ModelRoom.uid == uid))
     if room:
         return room
     raise HTTPException(status_code=404, detail='Room not found.')

@@ -15,16 +15,17 @@ async def list_inventory_card(session: AsyncSession) -> list[ModelInventoryCard]
 
 
 async def get_inventory_card(uid: UUID, session: AsyncSession) -> ModelInventoryCard:
-    cour = await session.execute(select(ModelInventoryCard).where(ModelInventoryCard.uid == uid))
-    inventory_card_model = cour.scalar_one_or_none()
+    inventory_card_model = await session.scalar(select(ModelInventoryCard).where(ModelInventoryCard.uid == uid))
     if inventory_card_model:
         return inventory_card_model
     raise HTTPException(404, detail='Not found inventory card.')
 
 
 async def post_inventory_card(
-        session: AsyncSession,
-        post_inventory_card: SchemaPostInventoryCard) -> list[ModelInventoryCard]:
+    session: AsyncSession,
+    post_inventory_card: SchemaPostInventoryCard
+) -> list[ModelInventoryCard]:
+
     inventory_card_model = ModelInventoryCard(**post_inventory_card.dict())
     try:
         session.add(inventory_card_model)

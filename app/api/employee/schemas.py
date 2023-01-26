@@ -12,12 +12,12 @@ class Employee(OrmModel):
     uid: UUID
     name: str
     surname: str
-    patronymicon: str | None = None
-    fullname: str
-    position: str
-    status: str
-    department: PostDepartments
-    room: PostRooms
+    # patronymicon: str | None = None
+    # fullname: str
+    # position: str
+    # status: str
+    # department: PostDepartments
+    # room: PostRooms
 
 
 class PostEmployee(OrmModel):

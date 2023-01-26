@@ -21,7 +21,7 @@ async def create_employee(employee: ShemaPostEmployee, session: AsyncSession) ->
         await session.refresh(employee_model)
     except IntegrityError:
         raise HTTPException(status_code=409, detail='Unique confict in inventory_info.')
-    return SchemaEmpoloyee(**employee_model.__dict__)
+    return employee_model
 
 
 async def patch_employee(uid: UUID, employee_item: SchemaPatchEmployee, session: AsyncSession) -> SchemaEmpoloyee:

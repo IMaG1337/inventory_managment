@@ -40,8 +40,7 @@ async def patch_department(
 
 
 async def get_department(uid: UUID, session: AsyncSession) -> ModelDepartments:
-    cour = await session.execute(select(ModelDepartments).where(ModelDepartments.uid == uid))
-    department = cour.scalar_one_or_none()
+    department = await session.scalar(select(ModelDepartments).where(ModelDepartments.uid == uid))
     if department:
         return department
     raise HTTPException(status_code=404, detail='Department not found.')

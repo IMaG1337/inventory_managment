@@ -14,6 +14,14 @@ async_session = sessionmaker(
 )
 
 
+def decor(func):
+    async def wrapper(*args, **kwargs):
+        db = get_db()
+        session = await anext(db)
+        return await func(*args, session=session, **kwargs)
+    return wrapper
+
+
 async def get_db() -> AsyncSession:
     session = async_session()
     try:
@@ -162,13 +170,13 @@ async def insert_inventory_card(all_devices: list, employee: str, office: str) -
 
 
 # ФИО сотрудника
-async def select_bio_employee(employee_uid: str) -> str:
-    sql_user = f"""
+@decor
+async def select_bio_employee(employee_uid: str, session: AsyncSession) -> str:
+    sql_user = """
         select e.surname, e.name, e.patronymicon
-        from employee e where e.uid = '{employee_uid}';
-    """
-    db = get_db()
-    session: AsyncSession = await anext(db)
+        from employee e where e.uid = '%s';""" % (employee_uid)
+    # db = get_db()
+    # session: AsyncSession = await anext(get_db())
     cour: CursorResult = await session.execute(sql_user)
     user_name = cour.fetchone()
     return " ".join(user_name)
@@ -469,3 +477,7 @@ async def update_chat_id(data: list[int, str]) -> bool:
         return result
     except Exception:
         return False
+
+import asyncio
+
+print(asyncio.run(select_bio_employee("c9498c10-6c69-4771-9d15-73c8376d47bd")))

@@ -14,7 +14,7 @@ async_session = sessionmaker(
 )
 
 
-def decor(func):
+def session_decor(func):
     async def wrapper(*args, **kwargs):
         db = get_db()
         session = await anext(db)
@@ -30,10 +30,12 @@ async def get_db() -> AsyncSession:
         await session.close()
 
 
-# вставка в таблицу temp
-async def insert_depen_temp(device, employee, room) -> None:
-    db = get_db()
-    session: AsyncSession = await anext(db)
+@session_decor
+async def insert_depen_temp(device, employee, room, session: AsyncSession = None) -> None:
+    """
+    Insert temp values into table temp_inventory_card.
+    """
+
     sql_insert = """
         insert into temp_inventory_card (uid , date, employee_uid, inventory_card_uid, room_uid)
         values((select uuid_generate_v4()),
@@ -48,8 +50,12 @@ async def insert_depen_temp(device, employee, room) -> None:
         pass
 
 
-# Проверка числится ли устройство за кем то
-async def check_inventory_card(device: str) -> dict:
+@session_decor
+async def check_inventory_card(device: str, session: AsyncSession = None) -> dict:
+    """
+    Check if the device belongs to someone
+    """
+
     sql = """
         SELECT card.uid, info.name, info.model, em.uid, em.name,
         em.surname, em.patronymicon, room.uid, room.floor, room.number
@@ -60,17 +66,13 @@ async def check_inventory_card(device: str) -> dict:
         on card.employee_uid = em.uid
         LEFT JOIN rooms room
         on card.room_uid = room.uid
-        WHERE info.uid  = '%s';
-    """ % (device)
+        WHERE info.uid  = '%s';""" % (device)
     sql_name_devices = """
         SELECT mi.name, mi.model  FROM inventory_info mi
-        WHERE uid = '%s'
-    """ % (device)
-    db = get_db()
-    session: AsyncSession = await anext(db)
+        WHERE uid = '%s'""" % (device)
+
     cour: CursorResult = await session.execute(sql)
     data = cour.fetchone()
-    # проверяем числится ли за кем то устройство
     if data:
         all_info = {
             "name_model": data[1:3],
@@ -80,29 +82,38 @@ async def check_inventory_card(device: str) -> dict:
             "floor_number": data[8:10],
         }
         return all_info
-    # Если устройство не числится ни за кем
-    else:
-        cour = await session.execute(sql_name_devices)
-        name_model = cour.fetchone()
-        all_info = {
-            "не учтённое устройство сверка": f"Устройство <b>{name_model[0]}</b>, \
-            модель <b>{name_model[1]}</b> ещё не используется, проведите учёт",
-            "не учтённое устройство учёт": "None",
+    cour = await session.execute(sql_name_devices)
+    name_model = cour.fetchone()
+    all_info = {
+        "не учтённое устройство сверка": f"Устройство <b>{name_model[0]}</b>, \
+        модель <b>{name_model[1]}</b> ещё не используется, проведите учёт",
+        "не учтённое устройство учёт": "None",
+    }
+    return all_info
+
+
+@session_decor
+async def insert_inventory_card(all_devices: list, employee: str, office: str, session: AsyncSession = None) -> dict:
+    """
+    Insert all devices into the insert_inventory_card table
+    """
+
+    response = {
+        "учтён": [],
+        "не учтён": [],
+        "uid": {
+            "employee": "",
+            "office": "",
+            "devices": [],
+            "name_model": []
         }
-        return all_info
-
-
-# Вставка в таблицу inventory_card
-async def insert_inventory_card(all_devices: list, employee: str, office: str) -> dict:
-    response = {"учтён": [], "не учтён": [], "uid": {"employee": "", "office": "", "devices": [], "name_model": []}}
+    }
 
     sql_user = """
         SELECT em.surname, em.name, em.patronymicon
         FROM employee em where em.uid = '%s';""" % (employee)
     for dev in all_devices:
-        db = get_db()
-        session: AsyncSession = await anext(db)
-        check_device = await check_inventory_card(dev)  # возвращаем словарь
+        check_device = await check_inventory_card(dev)  # return dict
         sql_name_devices = """
             SELECT inv.name, inv.model
             FROM inventory_info inv
@@ -117,20 +128,20 @@ async def insert_inventory_card(all_devices: list, employee: str, office: str) -
                 ('%s'),
                 ('%s'));""" % (dev, employee, office)
 
-        # Если устройство не зарегано ни за кем
+        # If the device is not registered for anyone
         if "не учтённое устройство учёт" in check_device.keys():
             await session.execute(sql_insert)
             name_cour: CursorResult = await session.execute(sql_name_devices)
-            name_model = name_cour.fetchone()  # Название устройства и модель
+            name_model = name_cour.fetchone()  # Device name and model
             user_cour: CursorResult = await session.execute(sql_user)
-            employee_fio = user_cour.fetchone()  # ФИО сотрудника
+            employee_fio = user_cour.fetchone()  # fullname employee
             response["учтён"].append(
                 f"Устройство <b>{name_model[0]}</b>, модель <b>{name_model[1]}</b> теперь учтено за cотрудником "
                 f"<b>{' '.join(employee_fio)}</b>"
             )
             await session.commit()
 
-        # Если устройство зарегано на этого же пользователя и помещении
+        # If the device is registered to the same user and room
         elif check_device["uid_emp"] == employee and check_device["floor_uid"] == office:
             response["учтён"].append(
                 f"Устройство <b>{check_device['name_model'][0]}</b>, "
@@ -139,7 +150,7 @@ async def insert_inventory_card(all_devices: list, employee: str, office: str) -
                 f"{check_device['floor_number'][0]} этаже в {check_device['floor_number'][1]} помещении"
             )
 
-        # Если устройство зарегано за сотрудником но находится в другом помещении
+        # If the device is registered for an employee but is located in another room
         elif check_device["floor_uid"] != office and check_device["uid_emp"] == employee:
             response["не учтён"].append(
                 f"Устройство <b>{check_device['name_model'][0]}</b>, модель <b>{check_device['name_model'][1]}</b> "
@@ -152,7 +163,7 @@ async def insert_inventory_card(all_devices: list, employee: str, office: str) -
             response["uid"]["devices"].append(dev)
             response["uid"]["name_model"].append(" ".join(check_device["name_model"]))
 
-        # Если устройство зарегано не на нашем сотруднике
+        # If the device is not registered to our employee
         elif check_device["uid_emp"] != employee:
             response["не учтён"].append(
                 f"Устройство <b>{check_device['name_model'][0]}</b>, модель <b>{check_device['name_model'][1]}</b> "
@@ -169,26 +180,38 @@ async def insert_inventory_card(all_devices: list, employee: str, office: str) -
     return response
 
 
-# ФИО сотрудника
-@decor
-async def select_bio_employee(employee_uid: str, session: AsyncSession) -> str:
+@session_decor
+async def select_bio_employee(employee_uid: str, session: AsyncSession = None) -> str:
+    """
+    Get fullname employee
+    """
+
     sql_user = """
         select e.surname, e.name, e.patronymicon
         from employee e where e.uid = '%s';""" % (employee_uid)
-    # db = get_db()
-    # session: AsyncSession = await anext(get_db())
     cour: CursorResult = await session.execute(sql_user)
     user_name = cour.fetchone()
     return " ".join(user_name)
 
 
-# Сверка девайса с сотрудником и офисом
-async def select(all_devices: list, user: str, office: str) -> dict:
-    response = {"учтён": [], "не учтён": [], "uid": {"employee": "", "office": "", "devices": [], "name_model": []}}
-    # Прогоняем каждое устройство
+@session_decor
+async def select(all_devices: list, user: str, office: str, session: AsyncSession = None) -> dict:
+    """
+    Verification of the device with the employee and the office
+    """
+
+    response = {
+        "учтён": [],
+        "не учтён": [],
+        "uid": {
+            "employee": "",
+            "office": "",
+            "devices": [],
+            "name_model": []
+            }
+    }
+
     for dev in all_devices:
-        db = get_db()
-        session: AsyncSession = await anext(db)
         sql = """
             SELECT card.uid, info.name, info.model, em.uid, em.name,
             em.surname, em.patronymicon, room.uid, room.floor, room.number
@@ -208,7 +231,7 @@ async def select(all_devices: list, user: str, office: str) -> dict:
 
         cour: CursorResult = await session.execute(sql)
         data = cour.fetchone()
-        # Проверяем числится ли за кем то данное устройство
+        # Check if this device belongs to someone.
         if data:
             all_info = {
                 "name_model": data[1:3],
@@ -218,7 +241,7 @@ async def select(all_devices: list, user: str, office: str) -> dict:
                 "floor_number": data[8:10],
             }
 
-            # Проверяем числится ли это устройство на данном сотруднике
+            # Checking whether this device is registered with this employee
             if all_info["uid_emp"] != user:
                 await insert_depen_temp(dev, user, office)
                 response["учтён"].append(
@@ -229,7 +252,7 @@ async def select(all_devices: list, user: str, office: str) -> dict:
                     f"<b>{all_info['floor_number'][1]}</b>. Проведите перемещение если необходимо."
                 )
 
-            # Проверяем числится ли это устройство в этом офисе
+            # Check if this device is listed in this office
             elif all_info["floor_uid"] != office:
                 await insert_depen_temp(dev, user, office)
                 response["учтён"].append(
@@ -238,16 +261,15 @@ async def select(all_devices: list, user: str, office: str) -> dict:
                     f"<b>{all_info['floor_number'][0]}</b> этаже в помещении <b>{all_info['floor_number'][1]}</b>"
                 )
 
-            # если всё ок то добавляем в response с ключем учтён
+            # if everything is fine, then add with the desired key
             else:
                 response["учтён"].append(
                     f"Устройство <b>{all_info['name_model'][0]}</b>, "
                     f"модель <b>{all_info['name_model'][1]}</b> сходится с cотрудником "
                     f"<b>{' '.join(all_info['user_name_surname_pat'])}</b>"
                 )
-        # Если устройство не числится то заполняем в отдельные ключи в словаре
+        # If the device is not listed, then fill in separate keys in the dictionary
         else:
-            # Достаем из БД имя устройства и модель.
             cour: CursorResult = await session.execute(sql_name_device)
             name_model = cour.fetchone()
             response["не учтён"].append(
@@ -261,11 +283,14 @@ async def select(all_devices: list, user: str, office: str) -> dict:
     return response
 
 
-async def movents(all_devices: list[str], employee: str, office: str) -> dict:
+@session_decor
+async def movents(all_devices: list[str], employee: str, office: str, session: AsyncSession = None) -> dict:
+    """
+    Insert into table movents
+    """
+
     response = {"учтён": [], "не учтён": []}
     for dev in all_devices:
-        db = get_db()
-        session: AsyncSession = await anext(db)
         sql_employee = """
             SELECT e.surname, e.name, e.patronymicon FROM employee e WHERE e.uid = '%s';""" % (employee)
         sql_name_device = """
@@ -283,15 +308,17 @@ async def movents(all_devices: list[str], employee: str, office: str) -> dict:
             set employee_uid = '%(employee)s',
             room_uid = '%(office)s'
             WHERE inventory_info_uid = '%(dev)s';""" % {"dev": dev, "employee": employee, "office": office}
-        check_device = await check_inventory_card(dev)  # числится ли устройство за кем то
+        check_device = await check_inventory_card(dev)
+
         if "не учтённое устройство учёт" not in check_device.keys():
             await session.execute(sql_insert)
             await session.execute(sql_update)
-            # Добавляем в таблицу movents данные от кого -> кому | и делаем update таблицы inventory_card
-            # Так как хотим получить ФИО кому мы передали мы делаем еще один запрос для получения ФИО нашего сотруд.
+            # Insert into table movents data from-to -> to | and do table update inventory_card
+            # Since we want to get the full name of whom we transferred, 
+            # we make another request to get the full name of our employee.
             cour: CursorResult = await session.execute(sql_employee)
-            name_surname = cour.fetchone()  # <-- Данные нашего сотрудника ФИО
-            sql_room = f"""select room.floor, room.number from rooms room where room.uid = '{office}' """
+            name_surname = cour.fetchone()  # fullname
+            sql_room = """select room.floor, room.number from rooms room where room.uid = '%s' """ % (office)
             cour = await session.execute(sql_room)
             office_floor_number = cour.fetchone()
             response["учтён"].append(
@@ -300,7 +327,7 @@ async def movents(all_devices: list[str], employee: str, office: str) -> dict:
                 f"этаже в <b>{office_floor_number[1]}</b> помещении"
             )
             await session.commit()
-        # Если устройство не числится то заполняем с ключом "не учтён"
+        # If the device is not listed, then fill in with the key "не учтён"
         else:
             cour = await session.execute(sql_name_device)
             name_model = cour.fetchone()
@@ -310,7 +337,8 @@ async def movents(all_devices: list[str], employee: str, office: str) -> dict:
     return response
 
 
-async def detail_device(device: str) -> str:
+@session_decor
+async def detail_device(device: str, session: AsyncSession = None) -> str:
     """
     Detailed information about the registred device.
     device is uid in inventory_info table.
@@ -326,8 +354,6 @@ async def detail_device(device: str) -> str:
             ON room.uid = inv.room_uid
             WHERE inv.inventory_info_uid  = '%s';""" % (device)
     try:
-        db = get_db()
-        session: AsyncSession = await anext(db)
         cour: CursorResult = await session.execute(sql)
         result = cour.fetchone()
     except Exception:
@@ -336,18 +362,19 @@ async def detail_device(device: str) -> str:
         return (
             f"Устройство: <b>{result[0]}</b>\n"
             f"Модель: <b>{result[1]}</b>\n"
-            f'Сотрудник: <b>{" ".join(result[2:5])}</b>\n'
+            f"Сотрудник: <b>{' '.join(result[2:5])}</b>\n"
             f"Этаж: <b>{result[5]}</b>\n"
             f"Помещение: <b>{result[6]}</b>"
         )
     return "Данное устройство не числится, проведите первичный учёт."
 
 
-async def detail_office(office: str) -> Union[str, bool]:
+@session_decor
+async def detail_office(office: str, session: AsyncSession = None) -> Union[str, bool]:
     """
     Information about the office.
-    office is uid in rooms table
     """
+
     sql_office = """
         SELECT room.floor as этаж,
         room."number" as помещение,
@@ -361,8 +388,6 @@ async def detail_office(office: str) -> Union[str, bool]:
         WHERE room.uid = '%s'
         GROUP BY (этаж, помещение);""" % (office)
     try:
-        db = get_db()
-        session: AsyncSession = await anext(db)
         cour: CursorResult = await session.execute(sql_office)
         result = cour.fetchone()
     except Exception:
@@ -374,10 +399,11 @@ async def detail_office(office: str) -> Union[str, bool]:
             f"Колличество сотрудников: <b>{result[2]}</b>\n"
             f"Колличество материальных ценнностей: <b>{result[3]}</b>"
         )
-    return "В данном помещении никто и ничто не числится"
+    return "В данном помещении никто и ничто не числится."
 
 
-async def detail_office_all(office: str) -> str:
+@session_decor
+async def detail_office_all(office: str, session: AsyncSession = None) -> str:
     """
     Detailed information about the office, who is in it and how many mats of values.
     office is uid in rooms table.
@@ -391,19 +417,18 @@ async def detail_office_all(office: str) -> str:
             WHERE inv.room_uid = '%s'
             GROUP BY (emp.surname, emp."name", emp.patronymicon);""" % (office)
     try:
-        db = get_db()
-        sesion: AsyncSession = await anext(db)
-        cour: CursorResult = await sesion.execute(sql)
+        cour: CursorResult = await session.execute(sql)
         employees = cour.fetchall()
     except Exception:
         return "Технические проблемы, попробуйте ещё раз."
-    result = ""
+    result = []
     for employee in employees:
-        result += f'Сотрудник <b>{" ".join(employee[0:3])}</b>: <b>{employee[3]}</b> мат ценностей\n'
-    return result
+        result.append(f'Сотрудник <b>{" ".join(employee[0:3])}</b>: <b>{employee[3]}</b> мат ценностей.')
+    return '\n'.join(result)
 
 
-async def detail_employee(employee: str) -> str:
+@session_decor
+async def detail_employee(employee: str, session: AsyncSession = None) -> str:
     """
     Detailed information about the employee, namely on which floor,
     room is listed and how many mats of values have.
@@ -420,31 +445,28 @@ async def detail_employee(employee: str) -> str:
         WHERE emp.uid = '%s'
         GROUP BY (r.floor, r."number", emp.surname, emp."name", emp.patronymicon);""" % (employee)
     try:
-        db = get_db()
-        session: AsyncSession = await anext(db)
         cour = await session.execute(sql)
         data = cour.fetchall()
         await session.close()
     except Exception:
         return "Технические проблемы, попробуйте ещё раз."
     if data:
-        employee = f"<b>{' '.join(data[0][0:3])}</b>\n"  # Ivanov Ivan Ivanovich
+        employee = [f"<b>{' '.join(data[0][0:3])}</b>"]  # Ivanov Ivan Ivanovich
         for detail in data:
-            employee += f"‣ <b>{detail[3]}</b> этаж <b>{detail[4]}</b> помещение <b>{detail[5]}</b> мат ценностей\n"
-        return employee
+            employee.append(f"‣ <b>{detail[3]}</b> этаж <b>{detail[4]}</b> помещение <b>{detail[5]}</b> мат ценностей")
+        return '\n'.join(employee)
     return "Такой сотрудник не числится"
 
 
-async def check_id(user_id: int) -> bool:
+@session_decor
+async def check_id(user_id: int, session: AsyncSession = None) -> bool:
     """
     Checks if a user with this id exists in the database
     user_id is uid in telegram_chat table
     """
     try:
-        db = get_db()
-        session: AsyncSession = await anext(db)
         sql = "SELECT tg.uid FROM telegram_chat tg WHERE tg.chat_uid = '%s';" % (int(user_id))
-        cour = await session.execute(sql)
+        cour: CursorResult = await session.execute(sql)
         user = cour.scalar()
         await session.close()
     except Exception:
@@ -454,14 +476,13 @@ async def check_id(user_id: int) -> bool:
     return False
 
 
-async def update_chat_id(data: list[int, str]) -> bool:
+@session_decor
+async def update_chat_id(data: list[int, str], session: AsyncSession = None) -> bool:
     """
     Update chat_uid in telegram_chat table.
     data is a list where the first element is int(chat_uid), second is str(phone_number)
     format phone_number like '79998887766'
     """
-    db = get_db()
-    session: AsyncSession = await anext(db)
     chat_id = data[0]
     phone_number = data[1]
     sql_update = """
@@ -477,7 +498,3 @@ async def update_chat_id(data: list[int, str]) -> bool:
         return result
     except Exception:
         return False
-
-import asyncio
-
-print(asyncio.run(select_bio_employee("c9498c10-6c69-4771-9d15-73c8376d47bd")))

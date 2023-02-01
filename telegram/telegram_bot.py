@@ -1,19 +1,13 @@
 # to delete files
 import glob
-import logging
-
 # System libraries
 import os
-
-# time
-from datetime import datetime
-from qreader import QReader
+import logging
 import cv2
-# from kraken import binarization
-# from PIL import Image
+from datetime import datetime
 
 # QR Code
-# from pyzbar.pyzbar import ZBarSymbol, decode
+from qreader import QReader
 
 # Telegram
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
@@ -51,14 +45,13 @@ logger = logging.getLogger(__name__)
 
 CHOICES, COMPUTER, PEOPLE, OFFICE, NEXT_EMPLOYEE_OR_ROOM, POOL, NEXT, DETAIL, DETAIL_CHOICE, CONTACT = range(10)
 
-# Наши клавиатуры
+# KEYBOARDS
 REPLY_KEYBOARD = [["Учёт", "Сверка", "Перемещение", "Получить информацию", "Выход"]]
 REPLY_KEYBOARD_NEXT = [["Следующий сотрудник", "Следующее помещение", "Меню", "Выход"]]
 REPLY_KEYBOARD_YES_NOT = [["Да", "Нет"]]
 
 NOW = datetime.now().strftime("%H:%M:%S")
 
-# Для нахождения соответствия в qr-code
 EMPLOYEE_OFFICE_DEVICE = {
     "device": "устройства",
     "office": "офиса",
@@ -69,7 +62,7 @@ EMPLOYEE_OFFICE_DEVICE = {
 TOKEN = settings.TOKEN
 
 
-#  ------------------------------Decode function---------------------------------
+#  ------------------------------Decode function--------------------------------
 def decode_image(file_name: str) -> str:
     qreader = QReader()
     image = cv2.imread(file_name)
@@ -77,9 +70,7 @@ def decode_image(file_name: str) -> str:
     # на stackoverwlow нашел этот пост
     # https://stackoverflow.com/questions/61442775/preprocessing-images-for-qr-detection-in-python/61443430#61443430
     # по этому подключил kraken в нем есть nlbin он выполняет бинаризацию с использованием нелинейной обработки
-    # так же нашел либу
-    # bw_im = binarization.nlbin(im)
-    # result = decode(bw_im, symbols=[ZBarSymbol.QRCODE])
+    # в дальнейшем нашел либу qreader
     decoded_text = qreader.detect_and_decode(image)
     if decoded_text:
         return decoded_text
@@ -97,17 +88,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about function"""
 
     user_id = update.message.from_user.id
-    result = await check_id(user_id)  # проверяем есть ли id в нашей базе
+    result = await check_id(user_id)  # check if the id is in our database
     if result:
         await update.message.reply_text(
             "Добрый день, выберите нужную фунцию",
             reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD, one_time_keyboard=True),
         )
         return CHOICES
-    else:
-        await update.message.reply_text(
-            "Отправьте ваш контакт.Нажмите на верхний правый угол, отправить свой контакт.")
-        return CONTACT
+    await update.message.reply_text(
+        "Отправьте ваш контакт. Нажмите на верхний правый угол, отправить свой контакт.")
+    return CONTACT
 
 
 async def choices(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -134,15 +124,14 @@ async def choices(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             reply_markup=ReplyKeyboardRemove(),
         )
         return DETAIL
-    else:
-        context.user_data["choice"] = text
-        context.user_data["photos_device"] = []
-        logger.info(f"Choices of {user.first_name}: {update.message.text}")
-        await update.message.reply_text(
-            "Пришлите qr-code офиса 🏢",
-            reply_markup=ReplyKeyboardRemove(),
-        )
-        return OFFICE
+    context.user_data["choice"] = text
+    context.user_data["photos_device"] = []
+    logger.info(f"Choices of {user.first_name}: {update.message.text}")
+    await update.message.reply_text(
+        "Пришлите qr-code офиса 🏢",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    return OFFICE
 
 
 async def next_employee_or_room(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -174,16 +163,19 @@ async def next_employee_or_room(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def photo_office(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """ask for qr-code office."""
+    """
+    ask for qr-code office.
+    """
+
     user = update.message.from_user
     file_name = f"./static_telegram/{user.id}-{NOW}-office.jpg"
     get_foto = await update.message.photo[-1].get_file()
-    await get_foto.download(file_name)
+    await get_foto.download_to_drive(file_name)
     logger.info(f"Photo of {user.first_name}: {file_name}")
     try:
         check_box = decode_image(file_name)
         if check_box[0] == "office":
-            context.user_data["photo_office"] = check_box[1]  # добавляем офис в user data для дальнейшей работы
+            context.user_data["photo_office"] = check_box[1]  # add office to user data for further work
             await update.message.reply_text("Отлично, теперь пришлите мне qr-code сотрудника 👨 👩.")
             return PEOPLE
         else:
@@ -193,6 +185,7 @@ async def photo_office(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             )
 
     except Exception as e:
+        os.remove(file_name)
         await update.message.reply_text("Ваш qr-cod не распознан, попробуйте ещё раз 🔁")
         logger.info(f"Error of {user.first_name}: {e}")
 
@@ -202,7 +195,7 @@ async def photo_people(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     user = update.message.from_user
     get_foto = await update.message.photo[-1].get_file()
     file_name = f"./static_telegram/{user.id}-{NOW}-people.jpg"
-    await get_foto.download(file_name)
+    await get_foto.download_to_drive(file_name)
     logger.info(f"Photo of {user.first_name}: {file_name}")
     try:
         check_box = decode_image(file_name)
@@ -233,7 +226,7 @@ async def photo_computer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user = update.message.from_user
     get_foto = await update.message.photo[-1].get_file()
     file_name = f"./static_telegram/{user.id}-{NOW}-computer.jpg"
-    await get_foto.download(file_name)
+    await get_foto.download_to_drive(file_name)
     logger.info(f"Photo of {user.first_name}: {file_name}")
     try:
         check_box = decode_image(file_name)
@@ -267,28 +260,26 @@ async def photo_computer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_id = update.message.from_user.id
     delete_all_image(user_id)
-    user_data = context.user_data["choice"]  # наш выбор
+    user_data = context.user_data["choice"]
 
     all_devices = context.user_data["photos_device"]
     user = context.user_data["photo_people"]
     office = context.user_data["photo_office"]
-
 # --------------------------------УЧЕТ------------------------------------------
     if user_data == "Учёт":
         data = await insert_inventory_card(all_devices, user, office)
         bio_employee = await select_bio_employee(user)
-        # 1) если нету не учтённых то просто присылаем сообщение
+        # 1) if there are no unaccounted for, then just send a message
         if data["не учтён"] == []:
             for i in data["учтён"]:
                 await update.message.reply_text(i, parse_mode="HTML")
-            # delete_all_image(user_id)
             await update.message.reply_text(
                 "Выберите нужную фунцию",
                 reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_NEXT, one_time_keyboard=True),
             )
             return NEXT_EMPLOYEE_OR_ROOM
 
-        # 2) если есть учтённые и не учтённые
+        # 2) if there are accounted for and not accounted for
         elif data["учтён"] != [] and data["не учтён"] != []:
             context.user_data["poll"] = data["uid"]
             context.user_data["poll"]["choice"] = "Учёт"
@@ -296,39 +287,29 @@ async def next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                 await update.message.reply_text(i, parse_mode="HTML")
             for i in data["не учтён"]:
                 await update.message.reply_text(i, parse_mode="HTML")
+            devices_n = 'устройства' if len(data["не учтён"]) > 1 else 'устройство'
+            await update.message.reply_text(
+                f"Желаете перезакрепить {devices_n} за сотрудником {bio_employee}? 🤔",
+                reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_YES_NOT, one_time_keyboard=True),
+            )
+            return POOL
 
-            # 2.1) Если не учтённых больше одного то возвращаем строку во множественном числе
-            if len(data["не учтён"]) > 1:
-                await update.message.reply_text(
-                    f"Желаете перезакрепить устройства за сотрудником {bio_employee}? 🤔",
-                    reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_YES_NOT, one_time_keyboard=True),
-                )
-                return POOL
-
-            # 2.2) во всех остальных в единственном числе
-            else:
-                await update.message.reply_text(
-                    f"Желаете перезакрепить устройство за сотрудником {bio_employee}? 🤔",
-                    reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_YES_NOT, one_time_keyboard=True),
-                )
-                return POOL
-
-        # 3) есть только не учтённые
+        # 3) there are only unaccounted for
         elif data["учтён"] == [] and data["не учтён"] != []:
             context.user_data["poll"] = data["uid"]
             context.user_data["poll"]["choice"] = "Учёт"
-            # 3.1) проверяем больше ли 1 устройства
+            # 3.1) check if more than 1 device
             if len(data["не учтён"]) > 1:
                 await update.message.reply_text("Устройства уже были учтены, желаете их перезакрепить? 😐")
                 for i in data["не учтён"]:
                     await update.message.reply_text(i, parse_mode="HTML")
-                    # delete_all_image(user_id)
+                    delete_all_image(user_id)
                 await update.message.reply_text(
                     f"Желаете перезакрепить устройства за сотрудником {bio_employee}? 🤔",
                     reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_YES_NOT, one_time_keyboard=True),
                 )
                 return POOL
-            # 3.2) если 1 устройство
+            # 3.2) if 1
             else:
                 await update.message.reply_text("Устройство уже было учтено 😐")
                 await update.message.reply_text(data["не учтён"][0], parse_mode="HTML")
@@ -344,18 +325,18 @@ async def next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         bio_employee = await select_bio_employee(user)
         data = await select(all_devices, user, office)
 
-        # 1) если нету не учтённых то просто присылаем сообщение
+        # 1) if there are no unaccounted for, then just send a message
         if data["не учтён"] == []:
             for i in data["учтён"]:
                 await update.message.reply_text(i, parse_mode="HTML")
-            # delete_all_image(user_id)
+            delete_all_image(user_id)
             await update.message.reply_text(
                 "Выберите нужную фунцию",
                 reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_NEXT, one_time_keyboard=True),
             )
             return NEXT_EMPLOYEE_OR_ROOM
 
-        # 2) если есть учтённые и не учтённые
+        # 2) if there are accounted for and not accounted for
         elif data["учтён"] != [] and data["не учтён"] != []:
             context.user_data["poll"] = data["uid"]
             context.user_data["poll"]["choice"] = "Сверка"
@@ -363,53 +344,33 @@ async def next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                 await update.message.reply_text(i, parse_mode="HTML")
             for i in data["не учтён"]:
                 await update.message.reply_text(i, parse_mode="HTML")
+            devices_y = "устройства" if len(data["не учтён"]) > 1 else "устройство"
+            await update.message.reply_text(
+                f"Желаете учесть {devices_y} за сотрудником {bio_employee}? 🤔",
+                reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_YES_NOT, one_time_keyboard=True),
+            )
+            return POOL
 
-            # 2.1) Если не учтённых больше одного то возвращаем строку во множественном числе
-            if len(data["не учтён"]) > 1:
-                await update.message.reply_text(
-                    f"Желаете учесть устройства за сотрудником {bio_employee}? 🤔",
-                    reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_YES_NOT, one_time_keyboard=True),
-                )
-                return POOL
-
-            # 2.2) во всех остальных в единственном числе
-            else:
-                await update.message.reply_text(
-                    f"Желаете учесть устройства за сотрудником {bio_employee}? 🤔",
-                    reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_YES_NOT, one_time_keyboard=True),
-                )
-                return POOL
-
-        # 3) есть только не учтённые
+        # 3) there are only unaccounted for
         elif data["учтён"] == [] and data["не учтён"] != []:
             context.user_data["poll"] = data["uid"]
             context.user_data["poll"]["choice"] = "Сверка"
-            # 3.1) проверяем больше ли 1 устройства
-            if len(data["не учтён"]) > 1:
-                await update.message.reply_text("Есть не учтённые устройства 😐")
-                for i in data["не учтён"]:
-                    await update.message.reply_text(i, parse_mode="HTML")
-                    # delete_all_image(user_id)
-                await update.message.reply_text(
-                    f"Желаете учесть устройства за сотрудником {bio_employee}? 🤔",
-                    reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_YES_NOT, one_time_keyboard=True),
-                )
-                return POOL
-            # 3.2) если 1 устройство
-            else:
-                await update.message.reply_text("Есть не учтённое устройство 😐")
-                await update.message.reply_text(data["не учтён"][0], parse_mode="HTML")
-                await update.message.reply_text(
-                    f"Желаете учесть устройство за сотрудником {bio_employee}? 🤔?",
-                    reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_YES_NOT, one_time_keyboard=True),
-                )
-                return POOL
+            devices_v = "устройства" if len(data["не учтён"]) > 1 else "устройство"
+            choise_v = "учтённые" if len(data["не учтён"]) > 1 else "учтённое"
+            await update.message.reply_text(f"Есть не {choise_v} {devices_v} 😐")
+            for i in data["не учтён"]:
+                await update.message.reply_text(i, parse_mode="HTML")
+                delete_all_image(user_id)
+            await update.message.reply_text(
+                f"Желаете учесть {devices_v} за сотрудником {bio_employee}? 🤔",
+                reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD_YES_NOT, one_time_keyboard=True),
+            )
+            return POOL
 # ------------------------------------------------------------------------------
 
 # ---------------------------ПЕРЕМЕЩЕНИЕ----------------------------------------
     elif user_data == "Перемещение":
         response = await movents(all_devices, user, office)
-        #
         if response["учтён"] != []:
             for device in response["учтён"]:
                 await update.message.reply_text(device, parse_mode="HTML")
@@ -430,7 +391,7 @@ async def poll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None or in
     devices = context.user_data["poll"]["devices"]
     employee = context.user_data["poll"]["employee"]
     office = context.user_data["poll"]["office"]
-    choice = context.user_data["poll"]["choice"]  # Учёт или Сверка
+    choice = context.user_data["poll"]["choice"]
     choice_dict = {"Сверка": "Учёт не проведён", "Учёт": "Перемещение не проведено"}
     if text == "Да":
         if len(devices) > 1:
@@ -486,17 +447,17 @@ async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE
     # this means this poll answer update is from an old poll, we can't do our answering then
     except KeyError:
         return
-    selected_options = answer.option_ids  # список из интов like this -> [0, 1...]
+    selected_options = answer.option_ids  # list int like this -> [0, 1, ...]
     all_devices = context.user_data["poll"]["devices"]  # uids device
     employee = context.user_data["poll"]["employee"]  # uid employee
     office = context.user_data["poll"]["office"]  # uid office
-    selected_devices = []  # только те устройства которые выбрал пользователь
+    selected_devices = []  # only those devices selected by the user
     for num in selected_options:
         selected_devices.append(all_devices[num])
     if choice == "Сверка":
-        response = await insert_inventory_card(selected_devices, employee, office)  # проводим первичный учёт устройств
+        response = await insert_inventory_card(selected_devices, employee, office)
     elif choice == "Учёт":
-        response = await movents(selected_devices, employee, office)  # перемещаем
+        response = await movents(selected_devices, employee, office)
     for device in response["учтён"]:
         await context.bot.send_message(
             answered_poll["chat_id"],
@@ -534,9 +495,7 @@ async def detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         check_box = decode_image(file_name)
         os.remove(file_name)
         if check_box[0] == "device":
-            result = await detail_device(
-                check_box[1]
-            )  # Передали uid устройства а получили инфу какое устройство, за кем числится и где.
+            result = await detail_device(check_box[1])
             await update.message.reply_text(f"{result}", parse_mode="HTML")
             await update.message.reply_text(
                 "Выберите нужную фунцию",
@@ -545,8 +504,7 @@ async def detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             return CHOICES
         elif check_box[0] == "office":
             context.user_data["office_detail"] = check_box[1]
-            result = await detail_office(
-                check_box[1])  # Передали uid офиса а получили инфу сколько сотрудников и сколько предметов
+            result = await detail_office(check_box[1])
             await update.message.reply_text(f"{result}", parse_mode="HTML")
             await update.message.reply_text(
                 "Хотите подробный отчёт?",
@@ -597,7 +555,7 @@ async def detail_choices(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     con = (
         update.message.contact
-    )  # con он же contact {'user_id': 358519422, 'first_name': 'Оля', 'phone_number': '79119998877'}
+    )  # like contact {'user_id': 358519422, 'first_name': 'Оля', 'phone_number': '79119998877'}
     result = await update_chat_id([con["user_id"], con["phone_number"]])  # True or False
     if result:
         await update.message.reply_text("Ваш телефон принят.")

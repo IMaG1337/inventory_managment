@@ -192,6 +192,7 @@ async def photo_office(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 async def photo_people(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """ask for qr-code people."""
+
     user = update.message.from_user
     get_foto = await update.message.photo[-1].get_file()
     file_name = f"./static_telegram/{user.id}-{NOW}-people.jpg"
@@ -217,6 +218,7 @@ async def photo_people(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 async def photo_computer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """ask for qr-code computer."""
+
     choice = context.user_data["choice"]
     choice_dict = {
         "Сверка": "Для завершения сверки устройств с сотрудником ",
@@ -387,6 +389,7 @@ async def next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def poll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None or int:
     """Sends a predefined poll"""
+
     text = update.message.text
     devices = context.user_data["poll"]["devices"]
     employee = context.user_data["poll"]["employee"]
@@ -439,6 +442,7 @@ async def poll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None or in
 
 async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None or int:
     """Summarize a users poll vote"""
+
     answer = update.poll_answer
     choice = context.user_data["poll"]["choice"]
     answered_poll = context.bot_data[answer.poll_id]  # answer.poll_id = '5321011176010678462'

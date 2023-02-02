@@ -1,9 +1,16 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends
-from api.rooms.schemas import Rooms, PostRooms, PatchRoom
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from db.database import get_db
 from api.rooms import services
+from api.rooms.schemas import (
+    Rooms,
+    PostRooms,
+    PatchRooms,
+    RoomNotFound404,
+    RoomEmptyJson
+)
 
 router = APIRouter(
     prefix="/rooms",
@@ -17,8 +24,21 @@ async def create_room(room: PostRooms, session: AsyncSession = Depends(get_db)):
     return room_model
 
 
-@router.patch("/{uid}", response_model=Rooms)
-async def patch_room(uid: UUID, room: PatchRoom, session: AsyncSession = Depends(get_db)):
+@router.patch(
+    "/{uid}",
+    response_model=Rooms,
+    responses={
+        404: {
+            "model": RoomNotFound404,
+            "description": "This endpoint is called if not found Room"
+        },
+        411: {
+            "model": RoomEmptyJson,
+            "description": "This endpoint is called if send empty Json."
+        }
+    }
+)
+async def patch_room(uid: UUID, room: PatchRooms, session: AsyncSession = Depends(get_db)):
     room_model = await services.patch_room(uid, room, session)
     return room_model
 

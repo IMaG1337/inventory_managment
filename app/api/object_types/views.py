@@ -1,6 +1,10 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_pagination import Page
+
+from db.database import get_db
+from api.object_types import services
 from api.object_types.schemas import (
     ObjectType as SchemaObjectType,
     PostObjectType as SchemaPostObjectType,
@@ -8,9 +12,6 @@ from api.object_types.schemas import (
     ObjectTypeNotFound404,
     ObjectTypeEmptyJson
 )
-from sqlalchemy.ext.asyncio import AsyncSession
-from db.database import get_db
-from api.object_types import services
 
 
 router = APIRouter(

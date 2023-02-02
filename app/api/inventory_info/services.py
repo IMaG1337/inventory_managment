@@ -12,7 +12,6 @@ from api.inventory_info.schemas import (
 
 
 async def list_inventory_info(session: AsyncSession) -> Page[ShemaInventoryInfo]:
-    # inventory_info = await session.execute(select(ModelInventoryInfo))
     return await paginate(session, select(ModelInventoryInfo))
 
 

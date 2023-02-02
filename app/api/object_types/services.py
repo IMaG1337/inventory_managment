@@ -9,7 +9,8 @@ from db.models.models import ObjectTypes as ModelObjectTypes
 from api.object_types.schemas import (
     PostObjectType as ShemaPostObjectType,
     PatchObjectType as SchemaPatchObjectType,
-    ObjectType as SchemaObjectType)
+    ObjectType as SchemaObjectType
+)
 
 
 async def create_object_type(object_type: ShemaPostObjectType, session: AsyncSession) -> ModelObjectTypes:

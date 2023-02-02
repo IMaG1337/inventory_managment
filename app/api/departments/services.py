@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from fastapi_pagination.ext.async_sqlalchemy import paginate
 from fastapi_pagination import Page
+
 from db.models.models import Departments as ModelDepartments
 from api.departments.schemas import (
     PostDepartments as SchemaPostDepartments,

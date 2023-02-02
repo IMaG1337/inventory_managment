@@ -1,6 +1,10 @@
 from uuid import UUID
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends
 from fastapi_pagination import Page
+
+from db.database import get_db
+from api.employee import services
 from api.employee.schemas import (
     Employee as SchemaEmloyee,
     PostEmployee as SchemaPostEmployee,
@@ -8,9 +12,6 @@ from api.employee.schemas import (
     EmployeeNotFound404,
     EmployeeEmptyJson
 )
-from sqlalchemy.ext.asyncio import AsyncSession
-from db.database import get_db
-from api.employee import services
 
 
 router = APIRouter(

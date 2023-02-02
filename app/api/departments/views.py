@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends
 from fastapi_pagination import Page
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.database import get_db
+from api.departments import services
 from api.departments.schemas import (
     Departments,
     PostDepartments,
@@ -10,8 +12,6 @@ from api.departments.schemas import (
     DepartmentsNotFound404,
     DepartmentsEmptyJson
 )
-from db.database import get_db
-from api.departments import services
 
 router = APIRouter(
     prefix="/departments",

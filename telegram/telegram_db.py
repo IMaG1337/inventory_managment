@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.engine.cursor import CursorResult
 from config import settings
 
-
+print(settings.DB_URL)
 async_engine = create_async_engine(settings.DB_URL)
 
 async_session = sessionmaker(
@@ -421,11 +421,13 @@ async def detail_office_all(office: str, session: AsyncSession = None) -> str:
         employees = cour.fetchall()
     except Exception:
         return "Технические проблемы, попробуйте ещё раз."
-    result = []
-    for employee in employees:
-        result.append(f'Сотрудник <b>{" ".join(employee[0:3])}</b>: <b>{employee[3]}</b> мат ценностей.')
-    return '\n'.join(result)
+    if employees:
 
+        result = []
+        for employee in employees:
+            result.append(f'Сотрудник <b>{" ".join(employee[0:3])}</b>: <b>{employee[3]}</b> мат ценностей.')
+        return '\n'.join(result)
+    return "Пустое помещение"
 
 @session_decor
 async def detail_employee(employee: str, session: AsyncSession = None) -> str:

@@ -36,5 +36,5 @@ class PostInventoryInfo(BaseModel):
     write_off_day: datetime | None = None
     inventory_number: str
     inventory_serial: str | None = None
-    responsible_uid: UUID
-    object_types_uid: UUID
+    responsible_uid: UUID | None = None
+    object_types_uid: UUID | None = None

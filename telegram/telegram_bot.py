@@ -73,7 +73,7 @@ def decode_image(file_name: str) -> str:
     # в дальнейшем нашел либу qreader
     decoded_text = qreader.detect_and_decode(image)
     if decoded_text:
-        return decoded_text
+        return decoded_text.split(';')
 # ------------------------------------------------------------------------------
 
 
@@ -493,7 +493,7 @@ async def detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     get_foto = await update.message.photo[-1].get_file()
     file_name = f"./static_telegram/{user.id}-{NOW}-detail.jpg"
-    await get_foto.download(file_name)
+    await get_foto.download_to_drive(file_name)
     logger.info(f"Photo of {user.first_name}: {file_name}")
     try:
         check_box = decode_image(file_name)
@@ -534,7 +534,6 @@ async def detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     except Exception as e:
         logger.info(f"Error of {user.first_name}: {e}")
-        os.remove(file_name)
         await update.message.reply_text(
             "Ваш qr-cod не распознан, попробуйте ещё раз 🔁\n" "Либо нажмите /cancel для выхода"
         )
@@ -547,12 +546,10 @@ async def detail_choices(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if text == "Да":
         result = await detail_office_all(office)
         await update.message.reply_text(result, parse_mode="HTML")
-    else:
-        office = ""
-        await update.message.reply_text(
-            "Выберите нужную фунцию",
-            reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD, one_time_keyboard=True),
-        )
+    await update.message.reply_text(
+        "Выберите нужную фунцию",
+        reply_markup=ReplyKeyboardMarkup(REPLY_KEYBOARD, one_time_keyboard=True),
+    )
     return CHOICES
 
 
